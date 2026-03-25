@@ -52,6 +52,14 @@ public final class CreMcpServer {
                     (ex, req) -> handleGetContext(getContext, ex, req)),
                 tool(
                     mcpJson,
+                    "expand",
+                    "Expand a node id into a bounded merged context slice",
+                    """
+                    {"type":"object","properties":{"node_id":{"type":"string"}},"required":["node_id"]}
+                    """,
+                    (ex, req) -> handleExpand(getContext, ex, req)),
+                tool(
+                    mcpJson,
                     "find_implementations",
                     "List implementing type node ids for a Java interface FQN",
                     """
@@ -127,5 +135,16 @@ public final class CreMcpServer {
                 .build())
         .callHandler(handler)
         .build();
+  }
+
+  private static CallToolResult handleExpand(
+      GetContextTool tool, McpSyncServerExchange ex, CallToolRequest req) {
+    try {
+      String nodeId = String.valueOf(req.arguments().get("node_id"));
+      String payload = JSON.writeValueAsString(tool.expand(nodeId));
+      return CallToolResult.builder().addTextContent(payload).build();
+    } catch (Exception e) {
+      return CallToolResult.builder().isError(true).addTextContent(e.getMessage()).build();
+    }
   }
 }

@@ -10,7 +10,7 @@ CRE ships as a Java + Spring Boot MCP server (`stdio`) that resolves short symbo
 |-------|------|-----------------|--------|
 | 0 | Prototype | QRY-01 | Resolve `Controller.method` to a method node; seed graph and minimal query path |
 | 1 | Core System | CTX-01, REC-01, CONF-01, PLC-01, IMPL-01, TRCE-01 | Structured `get_context`, deterministic reconstruction path, confidence/placeholders, `find_implementations`, `trace_flow` |
-| 2 | Plugin System | PLUG-01 | Core/plugin split; Spring plugin for annotation-driven semantics |
+| 2 | Plugin System | Complete    | 2026-03-25 |
 | 3 | Expand-on-demand | EXP-01 | Bounded `expand(node_id)`; placeholders replaced with deeper content |
 | 4 | Ranking & Pruning | — | Heuristics, depth weighting, noise reduction (no additional v1 IDs) |
 | 5 | Advanced Plugins | — | Event/exception/domain plugins; real-world readiness (no additional v1 IDs) |
@@ -40,7 +40,7 @@ Every v1 requirement maps to exactly one phase.
 
 - [ ] **Phase 0: Prototype** — Symbol resolution and minimal graph/query path
 - [x] **Phase 1: Core System** — Full core MCP context pipeline, reconstruction, trace tools
-- [ ] **Phase 2: Plugin System** — Extensible architecture + Spring semantics plugin
+- [x] **Phase 2: Plugin System** — Extensible architecture + Spring semantics plugin (completed 2026-03-25)
 - [ ] **Phase 3: Expand-on-demand** — Bounded expansion API
 - [ ] **Phase 4: Ranking & Pruning** — Heuristic quality and noise control
 - [ ] **Phase 5: Advanced Plugins** — Additional plugin classes for production depth
@@ -107,7 +107,7 @@ Plans:
 2. The Spring plugin enriches or annotates the graph using conventions such as `@Controller`, `@Service`, and `@Autowired` (examples from requirements).
 3. The core runtime remains buildable and testable without loading optional plugins (clear default wiring).
 
-**Plans:** TBD
+**Plans:** 1/1 plans complete
 
 Plans:
 

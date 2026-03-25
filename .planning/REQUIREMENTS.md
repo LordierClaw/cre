@@ -25,7 +25,7 @@
 
 ### Plugins / Spring Semantics
 
-- [ ] **PLUG-01**: Core + plugin architecture is implemented, with a Spring plugin that annotates/derives execution-relevant semantics from Spring annotations (e.g., `@Controller`, `@Service`, `@Autowired`)
+- [x] **PLUG-01**: Core + plugin architecture is implemented, with a Spring plugin that annotates/derives execution-relevant semantics from Spring annotations (e.g., `@Controller`, `@Service`, `@Autowired`)
 
 ### Tool Surface / Traceability
 
@@ -61,7 +61,7 @@ Which phases cover which requirements. Updated during roadmap creation:
 | EXP-01 | Phase 3 — Expand-on-demand | Pending |
 | CONF-01 | Phase 1 — Core System | Pending |
 | PLC-01 | Phase 1 — Core System | Pending |
-| PLUG-01 | Phase 2 — Plugin System | Pending |
+| PLUG-01 | Phase 2 — Plugin System | Complete |
 | IMPL-01 | Phase 1 — Core System | Pending |
 | TRCE-01 | Phase 1 — Core System | Pending |
 

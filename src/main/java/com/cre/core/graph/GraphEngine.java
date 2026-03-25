@@ -24,6 +24,10 @@ public final class GraphEngine {
   private final List<GraphEdge> edges = Collections.synchronizedList(new ArrayList<>());
   private final Map<String, Set<NodeId>> interfaceToImplementors = new ConcurrentHashMap<>();
 
+  private volatile boolean springSemanticsPresent = true;
+  private volatile boolean springSemanticsComplete = true;
+  private volatile String springSemanticsMissingSliceBoundary = "";
+
   public void addNode(GraphNode node) {
     nodes.putIfAbsent(node.id(), node);
   }
@@ -83,12 +87,26 @@ public final class GraphEngine {
     return set.stream().sorted().toList();
   }
 
+  public void springSemanticsState(boolean present, boolean complete, String missingSliceBoundary) {
+    this.springSemanticsPresent = present;
+    this.springSemanticsComplete = complete;
+    this.springSemanticsMissingSliceBoundary = missingSliceBoundary == null ? "" : missingSliceBoundary;
+  }
+
+  public boolean springSemanticsComplete() {
+    return springSemanticsComplete;
+  }
+
+  public String springSemanticsMissingSliceBoundary() {
+    return springSemanticsMissingSliceBoundary;
+  }
+
   public Map<String, Object> evidenceSnapshot() {
     Map<String, Object> m = new TreeMap<>();
     m.put("deterministic_ast", true);
-    m.put("spring_semantics", true);
+    m.put("spring_semantics", springSemanticsPresent && springSemanticsComplete);
     m.put("heuristic_repair", false);
-    m.put("gated_fallback", false);
+    m.put("gated_fallback", !springSemanticsComplete);
     return m;
   }
 }

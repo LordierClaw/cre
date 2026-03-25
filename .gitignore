@@ -6,3 +6,13 @@
 .vscode
 .claude
 .gemini
+
+# Maven / Java
+target/
+**/target/
+*.class
+*.jar
+*.war
+*.ear
+hs_err_pid*
+replay_pid*

@@ -1,0 +1,8 @@
+spring:
+  application:
+    name: cre
+
+logging:
+  level:
+    root: INFO
+    com.cre: INFO

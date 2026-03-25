@@ -13,6 +13,7 @@ public final class PluginRegistry {
   public static void applyPlugins(
       GraphEngine graph, Path javaSourceRoot, List<Path> javaFiles, boolean pluginsEnabled) {
     if (!pluginsEnabled) {
+      graph.springSemanticsState(false, false, "plugins_disabled");
       return;
     }
     for (GraphPlugin p : PLUGINS) {

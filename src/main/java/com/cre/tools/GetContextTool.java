@@ -76,6 +76,19 @@ public final class GetContextTool {
         placeholders.add(Placeholder.expandCallee(e.to().toString(), "calls_out"));
       }
     }
+    if (!graph.springSemanticsComplete()) {
+      String boundary = graph.springSemanticsMissingSliceBoundary();
+      if (boundary == null || boundary.isBlank()) {
+        boundary = "missing_spring_mapping";
+      }
+      placeholders.add(
+          new Placeholder(
+              "missing_spring_mapping",
+              "Spring semantics mapping incomplete",
+              "expand",
+              null,
+              boundary));
+    }
 
     List<Map<String, Object>> nodes = new ArrayList<>();
     for (NodeId id : included.stream().sorted().toList()) {

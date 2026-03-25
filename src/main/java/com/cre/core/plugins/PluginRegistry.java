@@ -6,7 +6,8 @@ import java.util.List;
 
 public final class PluginRegistry {
 
-  private static final List<GraphPlugin> PLUGINS = List.of(new SpringSemanticsPlugin());
+  private static final List<GraphPlugin> PLUGINS =
+      List.of(new SpringSemanticsPlugin(), new ExceptionFlowPlugin());
 
   private PluginRegistry() {}
 

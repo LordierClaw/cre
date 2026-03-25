@@ -6,5 +6,7 @@ public enum EdgeType {
   BELONGS_TO,
   ENTRY_POINT,
   SERVICE_LAYER,
-  DEPENDS_ON
+  DEPENDS_ON,
+  /** From enclosing method to callee invoked from a catch clause body (not normal try-body calls). */
+  CATCH_INVOKES
 }

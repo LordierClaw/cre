@@ -175,7 +175,7 @@ Plans:
 
 Plans:
 
-- [ ] 05-01: TBD — Advanced plugin examples and docs
+- [x] 05-01: exception-flow advanced plugin first (`.planning/phases/05-advanced-plugins/05-PLAN.md`) — checklist `05-01`..`05-04` completed 2026-03-26
 
 ### Phase 6: Evaluation
 

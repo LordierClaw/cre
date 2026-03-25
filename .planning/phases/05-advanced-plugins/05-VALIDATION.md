@@ -2,8 +2,8 @@
 phase: 05
 slug: advanced-plugins
 status: draft
-nyquist_compliant: false
-wave_0_complete: false
+nyquist_compliant: true
+wave_0_complete: true
 created: 2026-03-26
 ---
 
@@ -38,10 +38,10 @@ created: 2026-03-26
 
 | Task ID | Plan | Wave | Requirement | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|-----------|-------------------|-------------|--------|
-| 05-01-01 | 01 | 1 | PLUG-ADV-01 | unit | `mvn -q -DskipITs test -Dtest=ExceptionFlowPluginDeterminismTest` | ❌ W0 | ⬜ pending |
-| 05-01-02 | 01 | 1 | PLUG-ADV-02 | integration | `mvn -q -DskipITs test -Dtest=ExceptionFlowPluginIntegrationTest` | ❌ W0 | ⬜ pending |
-| 05-01-03 | 01 | 1 | COMPAT-01 | integration | `mvn -q -DskipITs test -Dtest=GetContextSchemaTest,ExpandToolContractTest,ContextRankingScoringTest` | ✅ | ⬜ pending |
-| 05-01-04 | 01 | 1 | REG-01 | regression | `mvn -q -DskipITs test` | ✅ | ⬜ pending |
+| 05-01-01 | 01 | 1 | PLUG-ADV-01 | unit | `mvn -q -DskipITs test -Dtest=ExceptionFlowPluginDeterminismTest` | ✅ | ✅ green |
+| 05-01-02 | 01 | 1 | PLUG-ADV-02 | integration | `mvn -q -DskipITs test -Dtest=ExceptionFlowPluginIntegrationTest` | ✅ | ✅ green |
+| 05-01-03 | 01 | 1 | COMPAT-01 | integration | `mvn -q -DskipITs test -Dtest=GetContextSchemaTest,ExpandToolContractTest,ContextRankingScoringTest` | ✅ | ✅ green |
+| 05-01-04 | 01 | 1 | REG-01 | regression | `mvn -q -DskipITs test` | ✅ | ✅ green |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠ flaky*
 
@@ -74,4 +74,12 @@ created: 2026-03-26
 - [ ] Feedback latency < 30s
 - [ ] `nyquist_compliant: true` set in frontmatter
 
-**Approval:** pending
+## Roadmap Success Criteria Mapping
+
+| ROADMAP Phase 5 success criteria | Concrete artifacts | Evidence used |
+|---|---|---|
+| #1 “At least one additional plugin category…” | `ExceptionFlowPlugin` + `ExceptionFlowController` fixture + `ExceptionFlowPluginIntegrationTest` | New `EdgeType.CATCH_INVOKES` edges emitted in `get_context` slice JSON |
+| #2 “Third-party or domain plugins can be added without modifying core source…” | `PluginRegistry` fixed ordered list extension (SPI deferred) | `05-RESEARCH.md` roadmap tension + deterministic plugin enable/disable behavior |
+| #3 “Plugin interactions with ranking/pruning…” | `RankingPruner` policy/Javadoc + `ContextRankingScoringTest` + integration schema regression tests | `CATCH_INVOKES` has explicit milliscore policy (zero incident) and Phase 4 metadata remains additive |
+
+**Approval:** approved 2026-03-26

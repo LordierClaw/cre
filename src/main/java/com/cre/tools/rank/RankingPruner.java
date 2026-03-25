@@ -22,6 +22,8 @@ import java.util.Set;
  * <ul>
  *   <li>depth_decay: max(0, 5000 - depth * 600)
  *   <li>edge_type: CALLS +120, ENTRY_POINT +220, SERVICE_LAYER +180, DEPENDS_ON +100
+ *   <li>edge_type (exception-flow): CATCH_INVOKES — <b>no</b> incident milliscore (visibility in graph
+ *       JSON only; same as unlisted structural edges for {@code aggregateBonuses})
  *   <li>uses_field: +80 per outgoing USES_FIELD (capped at 4 edges)
  *   <li>degree: +20 per outgoing/incoming CALLS edge (capped at 8 total)
  * </ul>
@@ -168,6 +170,8 @@ public final class RankingPruner {
         }
       } else if (edge.type() == EdgeType.USES_FIELD && fromIn) {
         usesFieldOut.put(from, usesFieldOut.getOrDefault(from, 0) + 1);
+      } else if (edge.type() == EdgeType.CATCH_INVOKES) {
+        // No incident bonus for CATCH_INVOKES — documented in class Javadoc (visibility-only for ranking).
       }
     }
     return new Aggregates(incidentBonus, usesFieldOut, outCalls, inCalls);

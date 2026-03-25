@@ -25,7 +25,7 @@ See: `.planning/PROJECT.md` (updated 2026-03-25)
 ## Current position
 
 Phase: 5
-Plan: 05 — in progress (05-01 complete)
+Plan: 05 — in progress (05-01..05-02 complete)
 
 ## Performance metrics
 

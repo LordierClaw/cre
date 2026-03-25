@@ -2,8 +2,8 @@
 phase: 04
 slug: ranking-pruning
 status: draft
-nyquist_compliant: false
-wave_0_complete: false
+nyquist_compliant: true
+wave_0_complete: true
 created: 2026-03-26
 ---
 
@@ -38,10 +38,10 @@ created: 2026-03-26
 
 | Task ID | Plan | Wave | Requirement | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|-----------|-------------------|-------------|--------|
-| 04-01-01 | 01 | 1 | NOISE-01 | unit | `mvn -q -DskipITs test -Dtest=ContextRankingScoringTest` | ❌ W0 | ⬜ pending |
-| 04-01-02 | 01 | 1 | NOISE-02 | unit | `mvn -q -DskipITs test -Dtest=ContextPruningPolicyTest` | ❌ W0 | ⬜ pending |
-| 04-01-03 | 01 | 1 | API-01 | integration | `mvn -q -DskipITs test -Dtest=GetContextSchemaTest,ExpandToolContractTest` | ✅ | ⬜ pending |
-| 04-01-04 | 01 | 1 | DET-01 | integration | `mvn -q -DskipITs test -Dtest=ExpandToolDeterminismTest` | ✅ | ⬜ pending |
+| 04-01-01 | 01 | 1 | NOISE-01 | unit | `mvn -q -DskipITs test -Dtest=ContextRankingScoringTest` | ✅ | ✅ green |
+| 04-01-02 | 01 | 1 | NOISE-02 | unit | `mvn -q -DskipITs test -Dtest=ContextPruningPolicyTest` | ✅ | ✅ green |
+| 04-01-03 | 01 | 1 | API-01 | integration | `mvn -q -DskipITs test -Dtest=GetContextSchemaTest,ExpandToolContractTest` | ✅ | ✅ green |
+| 04-01-04 | 01 | 1 | DET-01 | integration | `mvn -q -DskipITs test -Dtest=ExpandToolDeterminismTest` | ✅ | ✅ green |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠ flaky*
 
@@ -49,8 +49,8 @@ created: 2026-03-26
 
 ## Wave 0 Requirements
 
-- [ ] `src/test/java/com/cre/tools/ContextRankingScoringTest.java` — scoring/tie-break assertions
-- [ ] `src/test/java/com/cre/tools/ContextPruningPolicyTest.java` — top-k + score-floor behavior assertions
+- [x] `src/test/java/com/cre/tools/ContextRankingScoringTest.java` — scoring/tie-break + saturation assertions
+- [x] `src/test/java/com/cre/tools/ContextPruningPolicyTest.java` — top-k + score-floor behavior assertions
 
 *Existing infrastructure covers framework execution and fixture setup.*
 
@@ -66,11 +66,24 @@ created: 2026-03-26
 
 ## Validation Sign-Off
 
-- [ ] All tasks have `<automated>` verify or Wave 0 dependencies
-- [ ] Sampling continuity: no 3 consecutive tasks without automated verify
-- [ ] Wave 0 covers all MISSING references
-- [ ] No watch-mode flags
-- [ ] Feedback latency < 20s
-- [ ] `nyquist_compliant: true` set in frontmatter
+- [x] All tasks have `<automated>` verify or Wave 0 dependencies
+- [x] Sampling continuity: no 3 consecutive tasks without automated verify
+- [x] Wave 0 covers all MISSING references
+- [x] No watch-mode flags
+- [x] Feedback latency < 20s
+- [x] `nyquist_compliant: true` set in frontmatter
 
-**Approval:** pending
+**Approval:** approved 2026-03-26
+
+## ROADMAP Success Criteria Mapping
+
+- Criterion 1 (heuristic prioritization visible):
+  - `ContextPruningPolicyTest` enforces top-k + score-floor retention behavior.
+  - `GetContextSchemaTest` asserts `retained_count`/`pruned_count` telemetry exists.
+- Criterion 2 (variable/field-style signals included):
+  - `ContextRankingScoringTest` covers deterministic scoring and tie-break behavior with structured graph signals.
+  - `GetContextSchemaTest` asserts `score_components_used` is published in metadata.
+- Criterion 3 (measured size/noise improvement without API break):
+  - `ContextPruningPolicyTest` asserts `retained_count + pruned_count` accounting and non-zero pruning when active.
+  - `ExpandToolDeterminismTest` asserts post-merge prune keeps `retained_count == nodes.size()` and no dangling `target_node_id`.
+  - `GetContextSchemaTest` + `ExpandToolContractTest` keep v1 response envelope compatibility checks green.

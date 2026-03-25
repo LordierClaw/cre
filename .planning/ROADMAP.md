@@ -148,11 +148,14 @@ Plans:
 2. Variable usage or similar static signals influence inclusion or ordering in a documented way.
 3. Measured context size or noise metrics improve on representative fixtures without breaking v1 API contracts.
 
-**Plans:** TBD
+**Plans:** 1/1 plans complete
 
 Plans:
 
-- [ ] 04-01: TBD — Heuristic scoring and pruning pipeline
+- [x] 04-01: Heuristic scoring and pruning pipeline (`.planning/phases/04-ranking-pruning/04-PLAN.md`) — completed 2026-03-26
+- [x] 04-02: Integrate ranked pruning into `GetContextTool` with compact metadata (`.planning/phases/04-ranking-pruning/04-PLAN.md`) — completed 2026-03-26
+- [x] 04-03: Add ranking/pruning schema and determinism test coverage (`.planning/phases/04-ranking-pruning/04-PLAN.md`) — completed 2026-03-26
+- [x] 04-04: Validation + roadmap traceability checkpoint (`.planning/phases/04-ranking-pruning/04-PLAN.md`) — completed 2026-03-26
 
 ### Phase 5: Advanced Plugins
 

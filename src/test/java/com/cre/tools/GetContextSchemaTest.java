@@ -3,6 +3,7 @@ package com.cre.tools;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.cre.core.bootstrap.CreContext;
+import com.cre.testsupport.ExceptionFlowTestSupport;
 import com.cre.testsupport.GraphTestSupport;
 import com.cre.tools.model.GetContextResponse;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -50,5 +51,25 @@ class GetContextSchemaTest {
     assertThat(ph.path("reason").asText()).isNotBlank();
     assertThat(ph.path("likely_next_tool").asText()).isEqualTo("expand");
     assertThat(ph.path("slice_boundary").asText()).isNotBlank();
+  }
+
+  @Test
+  void get_context_evidence_and_ranking_metadata_unchanged_with_exception_flow_fixture() throws Exception {
+    CreContext ctx = ExceptionFlowTestSupport.load(true);
+    var node =
+        GraphTestSupport.requireMethod(
+            ctx.graph(), "com.cre.fixtures.ExceptionFlowController", "risky(String)");
+
+    GetContextResponse resp = new GetContextTool(ctx.graph()).execute(node.toString(), 0);
+    JsonNode tree = mapper.valueToTree(resp);
+
+    JsonNode evidence = tree.path("metadata").path("evidence");
+    assertThat(evidence.path("deterministic_ast").asBoolean()).isTrue();
+    assertThat(evidence.path("spring_semantics").asBoolean()).isTrue();
+    assertThat(evidence.path("heuristic_repair").asBoolean()).isFalse();
+    assertThat(evidence.path("gated_fallback").asBoolean()).isFalse();
+    assertThat(tree.path("metadata").path("ranking_version").asText()).isEqualTo("cre.rank.v1");
+    assertThat(tree.path("metadata").path("prune_policy").asText()).isEqualTo("top_k_floor");
+    assertThat(tree.path("metadata").path("score_components_used").isArray()).isTrue();
   }
 }

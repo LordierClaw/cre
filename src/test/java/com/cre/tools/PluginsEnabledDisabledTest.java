@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.cre.core.bootstrap.CreContext;
 import com.cre.core.graph.NodeId;
+import com.cre.testsupport.ExceptionFlowTestSupport;
 import com.cre.testsupport.GraphTestSupport;
 import com.cre.tools.model.GetContextResponse;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -58,6 +59,21 @@ class PluginsEnabledDisabledTest {
       }
     }
     assertThat(found).isTrue();
+  }
+
+  @Test
+  void plugins_disabled_has_no_catch_invokes_edges_in_output() throws Exception {
+    CreContext ctx = ExceptionFlowTestSupport.load(false);
+    NodeId node =
+        GraphTestSupport.requireMethod(
+            ctx.graph(), "com.cre.fixtures.ExceptionFlowController", "risky(String)");
+
+    GetContextResponse resp = new GetContextTool(ctx.graph()).execute(node.toString(), 0);
+    JsonNode tree = mapper.valueToTree(resp);
+
+    for (JsonNode e : tree.path("edges")) {
+      assertThat(e.path("type").asText()).isNotEqualTo("CATCH_INVOKES");
+    }
   }
 }
 

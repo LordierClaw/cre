@@ -13,7 +13,7 @@ Enable accurate code changes with drastically fewer tokens by progressively reco
 ### Validated
 
 <!-- Shipped and confirmed valuable. -->
-(None yet — ship to validate)
+- [x] **EXP-01**: Bounded `expand(node_id)` widens slices on demand (Validated in Phase 03: Expand-on-demand)
 
 ### Active
 
@@ -82,5 +82,5 @@ After each milestone (via `/gsd-complete-milestone`):
 
 ---
 
-*Last updated: 2026-03-25 after initialization*
+*Last updated: 2026-03-26 after Phase 03 completion*
 

@@ -59,8 +59,9 @@ class ExpandToolContractTest {
     GetContextResponse baseline = new GetContextTool(ctx.graph()).execute(anchor.toString(), 0);
     JsonNode baselineTree = mapper.valueToTree(baseline);
     boolean baselineHasTargetDepthLimit =
-        baselineTree.path("placeholders").findValuesAsText("target_node_id").stream()
-            .anyMatch(id -> target.toString().equals(id));
+        baselineTree.path("placeholders").isArray()
+            && baselineTree.path("placeholders").findValuesAsText("target_node_id").stream()
+                .anyMatch(id -> target.toString().equals(id));
     assertThat(baselineHasTargetDepthLimit).isTrue();
 
     GetContextResponse expanded = new GetContextTool(ctx.graph()).expand(target.toString());
@@ -73,9 +74,15 @@ class ExpandToolContractTest {
     assertThat(expandedNodeIds).contains(anchor.toString());
     assertThat(expandedNodeIds).contains(target.toString());
 
-    boolean stillHasDepthLimitForTarget =
-        expandedTree.path("placeholders").findValuesAsText("target_node_id").stream()
-            .anyMatch(id -> target.toString().equals(id));
+    assertThat(expandedTree.path("nodes").size()).isGreaterThan(baselineTree.path("nodes").size());
+
+    boolean stillHasDepthLimitForTarget = false;
+    for (JsonNode ph : expandedTree.path("placeholders")) {
+      if ("depth_limit".equals(ph.path("kind").asText())
+          && target.toString().equals(ph.path("target_node_id").asText())) {
+        stillHasDepthLimitForTarget = true;
+      }
+    }
     assertThat(stillHasDepthLimitForTarget).isFalse();
   }
 

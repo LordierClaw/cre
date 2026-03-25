@@ -39,7 +39,7 @@ Every v1 requirement maps to exactly one phase.
 **Phase numbering:** Integers 0–6 follow `.docs/WORKPLAN.md`. Decimal phases (e.g. 2.1) are reserved for urgent insertions.
 
 - [ ] **Phase 0: Prototype** — Symbol resolution and minimal graph/query path
-- [ ] **Phase 1: Core System** — Full core MCP context pipeline, reconstruction, trace tools
+- [x] **Phase 1: Core System** — Full core MCP context pipeline, reconstruction, trace tools
 - [ ] **Phase 2: Plugin System** — Extensible architecture + Spring semantics plugin
 - [ ] **Phase 3: Expand-on-demand** — Bounded expansion API
 - [ ] **Phase 4: Ranking & Pruning** — Heuristic quality and noise control

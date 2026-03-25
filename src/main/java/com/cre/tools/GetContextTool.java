@@ -19,6 +19,8 @@ import java.util.Set;
 public final class GetContextTool {
 
   public static final String SLICE_VERSION = "cre.slice.v1";
+  public static final int DEFAULT_EXPAND_DEPTH = 2;
+  public static final int MAX_EXPAND_NODES = 64;
 
   private final GraphEngine graph;
 
@@ -27,7 +29,11 @@ public final class GetContextTool {
   }
 
   public GetContextResponse execute(String nodeIdRaw, int depth) {
-    NodeId center = NodeId.parse(nodeIdRaw);
+    return buildSlice(nodeIdRaw, depth, Integer.MAX_VALUE);
+  }
+
+  private GetContextResponse buildSlice(String centerNodeIdRaw, int maxDepth, int maxIncludedNodes) {
+    NodeId center = NodeId.parse(centerNodeIdRaw);
     if (graph.node(center) == null) {
       return new GetContextResponse(
           SLICE_VERSION,
@@ -40,42 +46,69 @@ public final class GetContextTool {
                   "missing_node",
                   "Unknown node id",
                   "expand",
-                  nodeIdRaw,
+                  centerNodeIdRaw,
                   "unknown_node")));
     }
 
-    Set<NodeId> included = new LinkedHashSet<>();
     Map<NodeId, Integer> dist = new HashMap<>();
+    ArrayDeque<NodeId> q = new ArrayDeque<>();
+    dist.put(center, 0);
+    q.add(center);
 
-    if (depth <= 0) {
-      included.add(center);
-    } else {
-      dist.put(center, 0);
-      ArrayDeque<NodeId> q = new ArrayDeque<>();
-      q.add(center);
-      while (!q.isEmpty()) {
-        NodeId cur = q.poll();
-        int d = dist.get(cur);
-        if (d >= depth) {
+    boolean depthLimitHit = false;
+    boolean nodeBudgetHit = false;
+    Set<String> placeholderKeys = new LinkedHashSet<>();
+    List<Placeholder> placeholders = new ArrayList<>();
+
+    while (!q.isEmpty()) {
+      NodeId cur = q.poll();
+      int d = dist.get(cur);
+
+      if (d >= maxDepth) {
+        depthLimitHit = true;
+        for (GraphEdge e : graph.outgoingCalls(cur)) {
+          NodeId target = e.to();
+          if (!dist.containsKey(target)) {
+            String key = "depth|" + target;
+            if (placeholderKeys.add(key)) {
+              placeholders.add(Placeholder.expandCallee(target.toString(), "calls_out"));
+            }
+          }
+        }
+        continue;
+      }
+
+      for (GraphEdge e : graph.outgoingCalls(cur)) {
+        NodeId next = e.to();
+        if (dist.containsKey(next)) {
           continue;
         }
-        for (GraphEdge e : graph.outgoingCalls(cur)) {
-          NodeId next = e.to();
-          if (!dist.containsKey(next)) {
-            dist.put(next, d + 1);
-            q.add(next);
+        if (dist.size() >= maxIncludedNodes) {
+          nodeBudgetHit = true;
+          String key = "budget|" + next;
+          if (placeholderKeys.add(key)) {
+            placeholders.add(Placeholder.expandCallee(next.toString(), "node_budget"));
+          }
+          continue;
+        }
+        dist.put(next, d + 1);
+        q.add(next);
+      }
+    }
+
+    if (maxDepth <= 0) {
+      depthLimitHit = true;
+      for (GraphEdge e : graph.outgoingCalls(center)) {
+        NodeId target = e.to();
+        if (!dist.containsKey(target)) {
+          String key = "depth|" + target;
+          if (placeholderKeys.add(key)) {
+            placeholders.add(Placeholder.expandCallee(target.toString(), "calls_out"));
           }
         }
       }
-      included.addAll(dist.keySet());
     }
 
-    List<Placeholder> placeholders = new ArrayList<>();
-    if (depth <= 0) {
-      for (GraphEdge e : graph.outgoingCalls(center)) {
-        placeholders.add(Placeholder.expandCallee(e.to().toString(), "calls_out"));
-      }
-    }
     if (!graph.springSemanticsComplete()) {
       String boundary = graph.springSemanticsMissingSliceBoundary();
       if (boundary == null || boundary.isBlank()) {
@@ -90,8 +123,10 @@ public final class GetContextTool {
               boundary));
     }
 
+    List<NodeId> included = dist.keySet().stream().sorted().toList();
+
     List<Map<String, Object>> nodes = new ArrayList<>();
-    for (NodeId id : included.stream().sorted().toList()) {
+    for (NodeId id : included) {
       GraphNode gn = graph.node(id);
       if (gn == null) {
         continue;
@@ -106,7 +141,7 @@ public final class GetContextTool {
 
     List<Map<String, Object>> edgesOut = new ArrayList<>();
     for (GraphEdge e : graph.sortedEdges()) {
-      if (included.contains(e.from()) && included.contains(e.to())) {
+      if (dist.containsKey(e.from()) && dist.containsKey(e.to())) {
         Map<String, Object> row = new LinkedHashMap<>();
         row.put("from", e.from().toString());
         row.put("to", e.to().toString());
@@ -116,7 +151,7 @@ public final class GetContextTool {
     }
 
     List<Map<String, Object>> sliced = new ArrayList<>();
-    for (NodeId id : included.stream().sorted().toList()) {
+    for (NodeId id : included) {
       GraphNode gn = graph.node(id);
       if (gn == null || gn.kind() == NodeKind.FIELD) {
         continue;
@@ -127,6 +162,15 @@ public final class GetContextTool {
       seg.put("text", gn.snippet());
       sliced.add(seg);
     }
+
+    placeholders.sort(
+        (a, b) -> {
+          String ak = String.valueOf(a.targetNodeId());
+          String bk = String.valueOf(b.targetNodeId());
+          int c = ak.compareTo(bk);
+          if (c != 0) return c;
+          return String.valueOf(a.sliceBoundary()).compareTo(String.valueOf(b.sliceBoundary()));
+        });
 
     return new GetContextResponse(SLICE_VERSION, metadata(), nodes, edgesOut, sliced, placeholders);
   }

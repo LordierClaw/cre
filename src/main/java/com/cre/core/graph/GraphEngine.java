@@ -23,6 +23,8 @@ public final class GraphEngine {
   private final Map<NodeId, GraphNode> nodes = new ConcurrentHashMap<>();
   private final List<GraphEdge> edges = Collections.synchronizedList(new ArrayList<>());
   private final Map<String, Set<NodeId>> interfaceToImplementors = new ConcurrentHashMap<>();
+  private final Map<NodeId, List<GraphEdge>> outgoingCallsIndex = new ConcurrentHashMap<>();
+  private final Map<NodeId, List<GraphEdge>> incomingCallsIndex = new ConcurrentHashMap<>();
 
   private volatile boolean springSemanticsPresent = true;
   private volatile boolean springSemanticsComplete = true;
@@ -38,6 +40,14 @@ public final class GraphEngine {
     Objects.requireNonNull(edge.type());
     synchronized (edges) {
       edges.add(edge);
+    }
+    if (edge.type() == EdgeType.CALLS) {
+      outgoingCallsIndex
+          .computeIfAbsent(edge.from(), ignored -> Collections.synchronizedList(new ArrayList<>()))
+          .add(edge);
+      incomingCallsIndex
+          .computeIfAbsent(edge.to(), ignored -> Collections.synchronizedList(new ArrayList<>()))
+          .add(edge);
     }
   }
 
@@ -65,11 +75,22 @@ public final class GraphEngine {
   }
 
   public List<GraphEdge> outgoingCalls(NodeId from) {
-    synchronized (edges) {
-      return edges.stream()
-          .filter(e -> e.type() == EdgeType.CALLS && e.from().equals(from))
-          .sorted(Comparator.comparing(GraphEdge::to))
-          .toList();
+    List<GraphEdge> list = outgoingCallsIndex.get(from);
+    if (list == null || list.isEmpty()) {
+      return List.of();
+    }
+    synchronized (list) {
+      return list.stream().sorted(Comparator.comparing(GraphEdge::to)).toList();
+    }
+  }
+
+  public List<GraphEdge> incomingCalls(NodeId to) {
+    List<GraphEdge> list = incomingCallsIndex.get(to);
+    if (list == null || list.isEmpty()) {
+      return List.of();
+    }
+    synchronized (list) {
+      return list.stream().sorted(Comparator.comparing(GraphEdge::from)).toList();
     }
   }
 

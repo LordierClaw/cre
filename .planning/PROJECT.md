@@ -32,6 +32,7 @@ Enable accurate code changes with drastically fewer tokens by progressively reco
 - Graph model: classes/methods/fields with edges like `CALLS`, `USES_FIELD`, and `BELONGS_TO`.
 - Replace-on-demand: unknown/complex parts are represented initially (placeholders) and later replaced via deeper graph traversal and/or plugins.
 - Expand-on-demand: the user/agent requests deeper traversal via an `expand(node_id)`-style API when additional context is needed.
+- Ranking-and-pruning: context slices are now prioritized with deterministic weighted heuristics and bounded top-k/score-floor pruning to reduce noise while preserving API contracts.
 - Target developer workflow: an AI/agent tool loop calls `find_symbol` -> `get_context` -> `expand` (and related MCP functions) to iteratively reconstruct context for edits.
 - v1 output shape:
   - An MCP server (stdio transport)
@@ -82,5 +83,5 @@ After each milestone (via `/gsd-complete-milestone`):
 
 ---
 
-*Last updated: 2026-03-26 after Phase 03 completion*
+*Last updated: 2026-03-26 after Phase 04 completion*
 

@@ -49,9 +49,9 @@ created: 2026-03-26
 
 ## Wave 0 Requirements
 
-- [ ] `src/test/java/com/cre/tools/ExceptionFlowPluginDeterminismTest.java` — deterministic plugin edge generation checks
-- [ ] `src/test/java/com/cre/tools/ExceptionFlowPluginIntegrationTest.java` — get_context / ranking interaction checks
-- [ ] `src/test/java/com/cre/fixtures/ExceptionFlowController.java` — fixture with try/catch and exception handler patterns
+- [x] `src/test/java/com/cre/tools/ExceptionFlowPluginDeterminismTest.java` — deterministic plugin edge generation checks
+- [x] `src/test/java/com/cre/tools/ExceptionFlowPluginIntegrationTest.java` — get_context / ranking interaction checks
+- [x] `src/test/java/com/cre/fixtures/ExceptionFlowController.java` — fixture with try/catch and exception handler patterns
 
 *Existing infrastructure covers framework execution and core fixture bootstrapping.*
 
@@ -67,12 +67,12 @@ created: 2026-03-26
 
 ## Validation Sign-Off
 
-- [ ] All tasks have `<automated>` verify or Wave 0 dependencies
-- [ ] Sampling continuity: no 3 consecutive tasks without automated verify
-- [ ] Wave 0 covers all MISSING references
-- [ ] No watch-mode flags
-- [ ] Feedback latency < 30s
-- [ ] `nyquist_compliant: true` set in frontmatter
+- [x] All tasks have `<automated>` verify or Wave 0 dependencies
+- [x] Sampling continuity: no 3 consecutive tasks without automated verify
+- [x] Wave 0 covers all MISSING references
+- [x] No watch-mode flags
+- [x] Feedback latency < 30s
+- [x] `nyquist_compliant: true` set in frontmatter
 
 ## Roadmap Success Criteria Mapping
 

@@ -43,7 +43,7 @@ Every v1 requirement maps to exactly one phase.
 - [x] **Phase 2: Plugin System** — Extensible architecture + Spring semantics plugin (completed 2026-03-25)
 - [ ] **Phase 3: Expand-on-demand** — Bounded expansion API
 - [ ] **Phase 4: Ranking & Pruning** — Heuristic quality and noise control
-- [ ] **Phase 5: Advanced Plugins** — Additional plugin classes for production depth
+- [x] **Phase 5: Advanced Plugins** — Additional plugin classes for production depth (completed 2026-03-25)
 - [ ] **Phase 6: Evaluation** — MVP metrics and decision
 
 ## Phase details
@@ -171,7 +171,7 @@ Plans:
 2. Third-party or domain plugins can be added without modifying core source (configuration-only or SPI-only registration).
 3. Plugin interactions with ranking/pruning from Phase 4 are defined and testable.
 
-**Plans:** TBD
+**Plans:** 1/1 plans complete
 
 Plans:
 
@@ -209,7 +209,7 @@ Plans:
 | 2 | Plugin System | 0/TBD | Not started | — |
 | 3 | Expand-on-demand | 0/TBD | Not started | — |
 | 4 | Ranking & Pruning | 0/TBD | Not started | — |
-| 5 | Advanced Plugins | 0/TBD | Not started | — |
+| 5 | Advanced Plugins | 1/1 | Complete    | 2026-03-25 |
 | 6 | Evaluation | 0/TBD | Not started | — |
 
 ---

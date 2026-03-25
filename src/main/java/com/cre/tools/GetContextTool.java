@@ -6,6 +6,7 @@ import com.cre.core.graph.model.GraphEdge;
 import com.cre.core.graph.model.GraphNode;
 import com.cre.core.graph.model.NodeKind;
 import com.cre.core.graph.model.EdgeType;
+import com.cre.tools.rank.RankingPruner;
 import com.cre.tools.model.GetContextResponse;
 import com.cre.tools.model.Placeholder;
 import java.util.ArrayDeque;
@@ -30,11 +31,11 @@ public final class GetContextTool {
   }
 
   public GetContextResponse execute(String nodeIdRaw, int depth) {
-    return buildSlice(nodeIdRaw, depth, Integer.MAX_VALUE).response();
+    return buildSlice(nodeIdRaw, depth, Integer.MAX_VALUE, true).response();
   }
 
   public GetContextResponse expand(String nodeIdRaw) {
-    BuiltSlice target = buildSlice(nodeIdRaw, DEFAULT_EXPAND_DEPTH, MAX_EXPAND_NODES);
+    BuiltSlice target = buildSlice(nodeIdRaw, DEFAULT_EXPAND_DEPTH, MAX_EXPAND_NODES, false);
 
     NodeId targetId = null;
     try {
@@ -47,16 +48,18 @@ public final class GetContextTool {
     }
 
     NodeId anchor = deriveAnchor(targetId);
-    BuiltSlice center = buildSlice(anchor.toString(), 0, MAX_EXPAND_NODES);
+    BuiltSlice center = buildSlice(anchor.toString(), 0, MAX_EXPAND_NODES, false);
 
     GetContextResponse merged = mergeSlices(center.response(), target.response());
+    merged = applyRankingAfterMerge(merged, anchor);
     String mode = anchor.equals(targetId) ? "target_only_fallback" : "merged";
     return withExpansionMetadata(merged, mode, anchor.toString(), limitReason(target));
   }
 
   private record BuiltSlice(GetContextResponse response, boolean depthLimitHit, boolean nodeBudgetHit) {}
 
-  private BuiltSlice buildSlice(String centerNodeIdRaw, int maxDepth, int maxIncludedNodes) {
+  private BuiltSlice buildSlice(
+      String centerNodeIdRaw, int maxDepth, int maxIncludedNodes, boolean includeRankingMetadata) {
     NodeId center = NodeId.parse(centerNodeIdRaw);
     if (graph.node(center) == null) {
       return new BuiltSlice(
@@ -150,7 +153,21 @@ public final class GetContextTool {
               boundary));
     }
 
-    List<NodeId> included = dist.keySet().stream().sorted().toList();
+    RankingPruner.Result ranking =
+        RankingPruner.prune(
+            dist.keySet(),
+            center,
+            dist,
+            graph,
+            RankingPruner.DEFAULT_TOP_K,
+            RankingPruner.DEFAULT_SCORE_FLOOR);
+
+    List<NodeId> included =
+        ranking.retainedSet().stream().sorted((a, b) -> a.toString().compareTo(b.toString())).toList();
+    Set<String> retainedNodeIds = new LinkedHashSet<>();
+    for (NodeId id : included) {
+      retainedNodeIds.add(id.toString());
+    }
 
     List<Map<String, Object>> nodes = new ArrayList<>();
     for (NodeId id : included) {
@@ -168,7 +185,7 @@ public final class GetContextTool {
 
     List<Map<String, Object>> edgesOut = new ArrayList<>();
     for (GraphEdge e : graph.sortedEdges()) {
-      if (dist.containsKey(e.from()) && dist.containsKey(e.to())) {
+      if (ranking.retainedSet().contains(e.from()) && ranking.retainedSet().contains(e.to())) {
         Map<String, Object> row = new LinkedHashMap<>();
         row.put("from", e.from().toString());
         row.put("to", e.to().toString());
@@ -190,7 +207,18 @@ public final class GetContextTool {
       sliced.add(seg);
     }
 
-    placeholders.sort(
+    List<Placeholder> filtered = new ArrayList<>();
+    for (Placeholder p : placeholders) {
+      // pruned target -> dropped to avoid dangling target_node_id references
+      if (p.targetNodeId() != null && ranking.prunedSet().contains(NodeId.parse(p.targetNodeId()))) {
+        continue;
+      }
+      if (shouldKeepPlaceholder(p, retainedNodeIds)) {
+        filtered.add(p);
+      }
+    }
+
+    filtered.sort(
         (a, b) -> {
           String ak = String.valueOf(a.targetNodeId());
           String bk = String.valueOf(b.targetNodeId());
@@ -199,8 +227,13 @@ public final class GetContextTool {
           return String.valueOf(a.sliceBoundary()).compareTo(String.valueOf(b.sliceBoundary()));
         });
 
+    Map<String, Object> meta = metadata();
+    if (includeRankingMetadata) {
+      meta = withRankingMetadata(meta, ranking);
+    }
+
     return new BuiltSlice(
-        new GetContextResponse(SLICE_VERSION, metadata(), nodes, edgesOut, sliced, placeholders),
+        new GetContextResponse(SLICE_VERSION, meta, nodes, edgesOut, sliced, filtered),
         depthLimitHit,
         nodeBudgetHit);
   }
@@ -210,6 +243,19 @@ public final class GetContextTool {
     Map<String, Object> meta = new LinkedHashMap<>();
     meta.put("evidence", evidence);
     return meta;
+  }
+
+  private Map<String, Object> withRankingMetadata(
+      Map<String, Object> metadata, RankingPruner.Result ranking) {
+    Map<String, Object> out = new LinkedHashMap<>(metadata);
+    out.put("ranking_version", RankingPruner.RANKING_VERSION);
+    out.put("prune_policy", RankingPruner.PRUNE_POLICY);
+    out.put("top_k", RankingPruner.DEFAULT_TOP_K);
+    out.put("score_floor", RankingPruner.DEFAULT_SCORE_FLOOR);
+    out.put("pruned_count", ranking.prunedCount());
+    out.put("retained_count", ranking.retainedCount());
+    out.put("score_components_used", ranking.scoreComponentsUsed());
+    return out;
   }
 
   private String limitReason(BuiltSlice slice) {
@@ -345,6 +391,107 @@ public final class GetContextTool {
       return !presentNodeIds.contains(p.targetNodeId());
     }
     return true;
+  }
+
+  private GetContextResponse applyRankingAfterMerge(GetContextResponse merged, NodeId center) {
+    Set<NodeId> candidates = new LinkedHashSet<>();
+    for (Map<String, Object> node : merged.nodes()) {
+      Object raw = node.get("node_id");
+      if (raw instanceof String s) {
+        candidates.add(NodeId.parse(s));
+      }
+    }
+    if (candidates.isEmpty()) {
+      return merged;
+    }
+    Map<NodeId, Integer> dist = computeDistancesWithin(candidates, center);
+    RankingPruner.Result ranking =
+        RankingPruner.prune(
+            candidates,
+            center,
+            dist,
+            graph,
+            RankingPruner.DEFAULT_TOP_K,
+            RankingPruner.DEFAULT_SCORE_FLOOR);
+
+    Set<String> retained = new LinkedHashSet<>();
+    for (NodeId id : ranking.retainedSet()) {
+      retained.add(id.toString());
+    }
+    Set<String> pruned = new LinkedHashSet<>();
+    for (NodeId id : ranking.prunedSet()) {
+      pruned.add(id.toString());
+    }
+
+    List<Map<String, Object>> nodes =
+        merged.nodes().stream()
+            .filter(n -> retained.contains(String.valueOf(n.get("node_id"))))
+            .sorted((x, y) -> String.valueOf(x.get("node_id")).compareTo(String.valueOf(y.get("node_id"))))
+            .toList();
+    List<Map<String, Object>> sliced =
+        merged.slicedCode().stream()
+            .filter(n -> retained.contains(String.valueOf(n.get("node_id"))))
+            .sorted((x, y) -> String.valueOf(x.get("node_id")).compareTo(String.valueOf(y.get("node_id"))))
+            .toList();
+    List<Map<String, Object>> edges =
+        merged.edges().stream()
+            .filter(
+                e ->
+                    retained.contains(String.valueOf(e.get("from")))
+                        && retained.contains(String.valueOf(e.get("to"))))
+            .sorted(
+                (x, y) -> {
+                  int c = String.valueOf(x.get("from")).compareTo(String.valueOf(y.get("from")));
+                  if (c != 0) return c;
+                  c = String.valueOf(x.get("to")).compareTo(String.valueOf(y.get("to")));
+                  if (c != 0) return c;
+                  return String.valueOf(x.get("type")).compareTo(String.valueOf(y.get("type")));
+                })
+            .toList();
+
+    List<Placeholder> placeholders = new ArrayList<>();
+    for (Placeholder p : merged.placeholders()) {
+      if (p.targetNodeId() != null && pruned.contains(p.targetNodeId())) {
+        continue;
+      }
+      if (shouldKeepPlaceholder(p, retained)) {
+        placeholders.add(p);
+      }
+    }
+    placeholders.sort(
+        (p1, p2) -> {
+          int c = String.valueOf(p1.targetNodeId()).compareTo(String.valueOf(p2.targetNodeId()));
+          if (c != 0) return c;
+          c = String.valueOf(p1.kind()).compareTo(String.valueOf(p2.kind()));
+          if (c != 0) return c;
+          return String.valueOf(p1.sliceBoundary()).compareTo(String.valueOf(p2.sliceBoundary()));
+        });
+
+    Map<String, Object> meta = withRankingMetadata(merged.metadata(), ranking);
+    return new GetContextResponse(SLICE_VERSION, meta, nodes, edges, sliced, placeholders);
+  }
+
+  private Map<NodeId, Integer> computeDistancesWithin(Set<NodeId> nodes, NodeId center) {
+    Map<NodeId, Integer> dist = new HashMap<>();
+    if (!nodes.contains(center)) {
+      return dist;
+    }
+    ArrayDeque<NodeId> q = new ArrayDeque<>();
+    dist.put(center, 0);
+    q.add(center);
+    while (!q.isEmpty()) {
+      NodeId cur = q.poll();
+      int d = dist.get(cur);
+      for (GraphEdge e : graph.outgoingCalls(cur)) {
+        NodeId next = e.to();
+        if (!nodes.contains(next) || dist.containsKey(next)) {
+          continue;
+        }
+        dist.put(next, d + 1);
+        q.add(next);
+      }
+    }
+    return dist;
   }
 
   private GetContextResponse withExpansionMetadata(

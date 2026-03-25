@@ -30,6 +30,29 @@ class ExpandToolDeterminismTest {
     assertThat(nodeIds(ta.path("nodes"))).isEqualTo(nodeIds(tb.path("nodes")));
     assertThat(edgeTuples(ta.path("edges"))).isEqualTo(edgeTuples(tb.path("edges")));
     assertThat(nodeIds(ta.path("sliced_code"))).isEqualTo(nodeIds(tb.path("sliced_code")));
+    assertThat(ta.path("metadata").path("ranking_version").asText()).isEqualTo("cre.rank.v1");
+    assertThat(tb.path("metadata").path("ranking_version").asText()).isEqualTo("cre.rank.v1");
+  }
+
+  @Test
+  void post_merge_pruning_keeps_metadata_and_placeholder_targets_consistent() throws Exception {
+    CreContext ctx = CreContext.defaultFixtureContext(true);
+    NodeId target =
+        GraphTestSupport.requireMethod(ctx.graph(), "com.cre.fixtures.UserService", "getUser(String)");
+
+    GetContextResponse expanded = new GetContextTool(ctx.graph()).expand(target.toString());
+    JsonNode tree = mapper.valueToTree(expanded);
+    int retained = tree.path("metadata").path("retained_count").asInt();
+    int nodeCount = tree.path("nodes").size();
+    assertThat(retained).isEqualTo(nodeCount);
+
+    var nodeIds = tree.path("nodes").findValuesAsText("node_id");
+    for (JsonNode ph : tree.path("placeholders")) {
+      String targetNodeId = ph.path("target_node_id").asText("");
+      if (!targetNodeId.isBlank()) {
+        assertThat(nodeIds).contains(targetNodeId);
+      }
+    }
   }
 
   private static List<String> nodeIds(JsonNode arr) {

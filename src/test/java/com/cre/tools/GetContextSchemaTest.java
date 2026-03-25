@@ -30,6 +30,13 @@ class GetContextSchemaTest {
     assertThat(evidence.path("spring_semantics").asBoolean()).isTrue();
     assertThat(evidence.path("heuristic_repair").asBoolean()).isFalse();
     assertThat(evidence.path("gated_fallback").asBoolean()).isFalse();
+    assertThat(tree.path("metadata").path("ranking_version").asText()).isEqualTo("cre.rank.v1");
+    assertThat(tree.path("metadata").path("prune_policy").asText()).isEqualTo("top_k_floor");
+    assertThat(tree.path("metadata").path("top_k").asInt()).isGreaterThan(0);
+    assertThat(tree.path("metadata").path("score_floor").asInt()).isGreaterThanOrEqualTo(0);
+    assertThat(tree.path("metadata").path("retained_count").asInt()).isGreaterThan(0);
+    assertThat(tree.path("metadata").path("pruned_count").asInt()).isGreaterThanOrEqualTo(0);
+    assertThat(tree.path("metadata").path("score_components_used").isArray()).isTrue();
 
     assertThat(tree.path("sliced_code").isArray()).isTrue();
     assertThat(tree.path("nodes").isArray()).isTrue();

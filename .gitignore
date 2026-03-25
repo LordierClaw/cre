@@ -1,5 +1,7 @@
 .docs
-.cursor
+.cursor/*
+!.cursor/rules/
+!.cursor/rules/**
 .idea
 .vscode
 .claude

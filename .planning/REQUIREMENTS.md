@@ -55,22 +55,22 @@ Which phases cover which requirements. Updated during roadmap creation:
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| QRY-01 | Phase TBD | Pending |
-| CTX-01 | Phase TBD | Pending |
-| REC-01 | Phase TBD | Pending |
-| EXP-01 | Phase TBD | Pending |
-| CONF-01 | Phase TBD | Pending |
-| PLC-01 | Phase TBD | Pending |
-| PLUG-01 | Phase TBD | Pending |
-| IMPL-01 | Phase TBD | Pending |
-| TRCE-01 | Phase TBD | Pending |
+| QRY-01 | Phase 0 — Prototype | Pending |
+| CTX-01 | Phase 1 — Core System | Pending |
+| REC-01 | Phase 1 — Core System | Pending |
+| EXP-01 | Phase 3 — Expand-on-demand | Pending |
+| CONF-01 | Phase 1 — Core System | Pending |
+| PLC-01 | Phase 1 — Core System | Pending |
+| PLUG-01 | Phase 2 — Plugin System | Pending |
+| IMPL-01 | Phase 1 — Core System | Pending |
+| TRCE-01 | Phase 1 — Core System | Pending |
 
 **Coverage:**
 - v1 requirements: 9 total
-- Mapped to phases: 0
-- Unmapped: 9 ⚠️
+- Mapped to phases: 9
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-25*
-*Last updated: 2026-03-25 after v1 requirements initialization*
+*Last updated: 2026-03-25 after roadmap traceability (see `.planning/ROADMAP.md`)*
 

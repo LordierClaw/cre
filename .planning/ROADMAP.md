@@ -16,6 +16,7 @@ CRE ships as a Java + Spring Boot MCP server (`stdio`) that resolves short symbo
 | 5 | Advanced Plugins | — | Event/exception/domain plugins; real-world readiness (no additional v1 IDs) |
 | 6 | Evaluation | — | (ABANDONED) Measure tokens, accuracy, usability; decide scale vs pivot (no additional v1 IDs) |
 | 7 | Real-project Ingestion | ING-01, E2E-01 | Directory-based ingestion and E2E verification on real project |
+| 8 | HTTP/SSE & REST Support | — | Transition to persistent Spring Boot server with SSE/REST transport |
 
 ## v1 requirement coverage
 
@@ -48,6 +49,7 @@ Every v1 requirement maps to exactly one phase.
 - [x] **Phase 5: Advanced Plugins** — Additional plugin classes for production depth (completed 2026-03-25)
 - [-] **Phase 6: Evaluation** — (ABANDONED) MVP metrics and decision
 - [x] **Phase 7: Real-project Ingestion** — Automate discovery + E2E verification (Completed 2026-03-27)
+- [x] **Phase 8: HTTP/SSE & REST Support** — Transition to persistent Spring Boot server with SSE/REST transport (Completed 2026-03-27)
 
 ## Phase details
 
@@ -220,6 +222,7 @@ Plans:
 | 5 | Advanced Plugins | 1/1 | Complete | 2026-03-25 |
 | 6 | Evaluation | 0/TBD | Abandoned | — |
 | 7 | Real-project Ingestion | 1/1 | Complete | 2026-03-27 |
+| 8 | HTTP/SSE & REST Support | 1/1 | Complete | 2026-03-27 |
 
 ---
 

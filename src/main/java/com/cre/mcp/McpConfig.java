@@ -12,13 +12,15 @@ import io.modelcontextprotocol.server.McpServerFeatures.SyncToolSpecification;
 import io.modelcontextprotocol.server.McpSyncServer;
 import io.modelcontextprotocol.server.McpSyncServerExchange;
 import io.modelcontextprotocol.server.transport.StdioServerTransportProvider;
+import io.modelcontextprotocol.server.transport.HttpServletSseServerTransportProvider;
 import io.modelcontextprotocol.spec.McpSchema;
 import io.modelcontextprotocol.spec.McpSchema.CallToolRequest;
 import io.modelcontextprotocol.spec.McpSchema.CallToolResult;
-import jakarta.annotation.PostConstruct;
 import java.nio.file.Path;
 import java.util.Map;
 import java.util.function.BiFunction;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.web.servlet.ServletRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import tools.jackson.databind.json.JsonMapper;
@@ -28,6 +30,9 @@ public class McpConfig {
 
   private static final ObjectMapper JSON = new ObjectMapper();
 
+  @Value("${mcp.transport:sse}")
+  private String transportType;
+
   @Bean
   public JacksonMcpJsonMapper mcpJsonMapper() {
     JsonMapper jackson3 = JsonMapper.builder().build();
@@ -35,10 +40,26 @@ public class McpConfig {
   }
 
   @Bean
-  public McpSyncServer mcpServer(JacksonMcpJsonMapper mcpJson) {
-    StdioServerTransportProvider stdio = new StdioServerTransportProvider(mcpJson);
+  public HttpServletSseServerTransportProvider sseTransport(JacksonMcpJsonMapper mcpJson) {
+    return HttpServletSseServerTransportProvider.builder()
+        .jsonMapper(mcpJson)
+        .sseEndpoint("/mcp/sse")
+        .messageEndpoint("/mcp/messages")
+        .build();
+  }
 
-    return McpServer.sync(stdio)
+  @Bean
+  public ServletRegistrationBean<HttpServletSseServerTransportProvider> mcpServlet(HttpServletSseServerTransportProvider sseTransport) {
+    return new ServletRegistrationBean<>(sseTransport, "/mcp/sse", "/mcp/messages");
+  }
+
+  @Bean
+  public McpSyncServer mcpServer(JacksonMcpJsonMapper mcpJson, HttpServletSseServerTransportProvider sseTransport) {
+    var builder = McpServer.sync(transportType.equalsIgnoreCase("stdio") 
+        ? new StdioServerTransportProvider(mcpJson) 
+        : sseTransport);
+
+    return builder
         .serverInfo("cre-mcp", "0.1.0")
         .jsonMapper(mcpJson)
         .tools(

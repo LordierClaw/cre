@@ -2,6 +2,9 @@ spring:
   application:
     name: cre
 
+mcp:
+  transport: sse
+
 logging:
   level:
     root: INFO

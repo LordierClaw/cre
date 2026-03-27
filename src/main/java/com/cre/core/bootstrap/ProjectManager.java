@@ -8,22 +8,33 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Service;
 
 /**
  * Manages multiple {@link CreContext} instances with a TTL cache.
  * Supports multi-project 24/7 runtime.
  */
+@Service
 public final class ProjectManager {
 
   private static final Logger log = LoggerFactory.getLogger(ProjectManager.class);
-  private static final ProjectManager INSTANCE = new ProjectManager();
+  private static ProjectManager INSTANCE;
   private static final Duration TTL = Duration.ofHours(2);
 
   private final Map<Path, CachedContext> cache = new ConcurrentHashMap<>();
 
-  private ProjectManager() {}
+  public ProjectManager() {
+    INSTANCE = this;
+  }
 
+  /**
+   * @deprecated Use dependency injection.
+   */
+  @Deprecated
   public static ProjectManager getInstance() {
+    if (INSTANCE == null) {
+      INSTANCE = new ProjectManager();
+    }
     return INSTANCE;
   }
 

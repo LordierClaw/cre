@@ -18,6 +18,12 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api")
 public class CreController {
 
+  private final ProjectManager projectManager;
+
+  public CreController(ProjectManager projectManager) {
+    this.projectManager = projectManager;
+  }
+
   @PostMapping("/get_context")
   public GetContextResponse getContext(@RequestBody Map<String, Object> req) throws Exception {
     String projectRoot = String.valueOf(req.get("project_root"));
@@ -27,7 +33,7 @@ public class CreController {
       depth = n.intValue();
     }
     
-    CreContext ctx = ProjectManager.getInstance().getContext(Path.of(projectRoot));
+    CreContext ctx = projectManager.getContext(Path.of(projectRoot));
     return new GetContextTool(ctx.graph()).execute(nodeId, depth);
   }
 
@@ -36,7 +42,7 @@ public class CreController {
     String projectRoot = String.valueOf(req.get("project_root"));
     String nodeId = String.valueOf(req.get("node_id"));
     
-    CreContext ctx = ProjectManager.getInstance().getContext(Path.of(projectRoot));
+    CreContext ctx = projectManager.getContext(Path.of(projectRoot));
     return new GetContextTool(ctx.graph()).expand(nodeId);
   }
 
@@ -45,7 +51,7 @@ public class CreController {
     String projectRoot = String.valueOf(req.get("project_root"));
     String fqn = String.valueOf(req.get("interface_fqn"));
     
-    CreContext ctx = ProjectManager.getInstance().getContext(Path.of(projectRoot));
+    CreContext ctx = projectManager.getContext(Path.of(projectRoot));
     return new FindImplementationsTool(ctx.graph()).execute(fqn);
   }
 
@@ -54,14 +60,14 @@ public class CreController {
     String projectRoot = String.valueOf(req.get("project_root"));
     String id = String.valueOf(req.get("entry_method_node_id"));
     
-    CreContext ctx = ProjectManager.getInstance().getContext(Path.of(projectRoot));
+    CreContext ctx = projectManager.getContext(Path.of(projectRoot));
     return new TraceFlowTool(ctx.graph()).execute(id);
   }
 
   @PostMapping("/reset_project")
   public String resetProject(@RequestBody Map<String, Object> req) {
     String projectRoot = String.valueOf(req.get("project_root"));
-    ProjectManager.getInstance().resetContext(Path.of(projectRoot));
+    projectManager.resetContext(Path.of(projectRoot));
     return "Project reset: " + projectRoot;
   }
 }

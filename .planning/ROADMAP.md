@@ -17,6 +17,7 @@ CRE ships as a Java + Spring Boot MCP server (`stdio`) that resolves short symbo
 | 6 | Evaluation | — | (ABANDONED) Measure tokens, accuracy, usability; decide scale vs pivot (no additional v1 IDs) |
 | 7 | Real-project Ingestion | ING-01, E2E-01 | Directory-based ingestion and E2E verification on real project |
 | 8 | HTTP/SSE & REST Support | — | Transition to persistent Spring Boot server with SSE/REST transport |
+| 9 | Output Format Optimization | — | Compact, file-centric integrated view with XML placeholders |
 
 ## v1 requirement coverage
 
@@ -207,6 +208,27 @@ Plans:
 - [x] 07-01: Automate directory indexing in `CreContext`
 - [x] 07-02: E2E test suite for `cre-test-project`
 - [x] 07-03: Final verification and cleanup
+
+### Phase 9: Output Format Optimization
+
+**Goal:** Improve token efficiency and readability by switching to a compact, XML-tagged output format that uses placeholders for omitted logic and avoids full file paths.
+
+**Depends on:** Phase 8
+
+**Requirements:** None (Quality/Usability improvement)
+
+**Success criteria** (what must be TRUE):
+1. Code slices in `get_context` output use XML-style placeholders (e.g., `<ommitted_NN/>`) for non-critical code blocks.
+2. Full class paths are replaced with simple class names or relative paths in the code display.
+3. The resulting JSON remains valid and easily parsable by both humans and LLMs.
+4. Existing functionality and E2E tests are preserved and updated to match the new format.
+
+**Plans:**
+
+- [ ] 09-01-PLAN.md — Optimized Output Models & Builder Infrastructure
+- [ ] 09-02-PLAN.md — AST Transformation & Placeholder Logic
+- [ ] 09-03-PLAN.md — System Integration & E2E Validation
+
 ## Progress
 
 **Execution order:** 0 → 1 → 2 → 3 → 4 → 5 → 6 → 7.
@@ -223,8 +245,8 @@ Plans:
 | 6 | Evaluation | 0/TBD | Abandoned | — |
 | 7 | Real-project Ingestion | 1/1 | Complete | 2026-03-27 |
 | 8 | HTTP/SSE & REST Support | 1/1 | Complete | 2026-03-27 |
+| 9 | Output Format Optimization | 0/3 | Ready | — |
 
 ---
 
-*Last updated: 2026-03-27 — roadmap synchronized with execution summaries and planning integrity check.*
-
+*Last updated: 2026-03-28 — roadmap synchronized with execution summaries and planning integrity check.*

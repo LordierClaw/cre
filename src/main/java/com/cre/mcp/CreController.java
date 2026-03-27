@@ -1,0 +1,67 @@
+package com.cre.mcp;
+
+import com.cre.core.bootstrap.CreContext;
+import com.cre.core.bootstrap.ProjectManager;
+import com.cre.tools.FindImplementationsTool;
+import com.cre.tools.GetContextTool;
+import com.cre.tools.TraceFlowTool;
+import com.cre.tools.model.GetContextResponse;
+import java.nio.file.Path;
+import java.util.List;
+import java.util.Map;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+@RequestMapping("/api")
+public class CreController {
+
+  @PostMapping("/get_context")
+  public GetContextResponse getContext(@RequestBody Map<String, Object> req) throws Exception {
+    String projectRoot = String.valueOf(req.get("project_root"));
+    String nodeId = String.valueOf(req.get("node_id"));
+    int depth = 0;
+    if (req.get("depth") instanceof Number n) {
+      depth = n.intValue();
+    }
+    
+    CreContext ctx = ProjectManager.getInstance().getContext(Path.of(projectRoot));
+    return new GetContextTool(ctx.graph()).execute(nodeId, depth);
+  }
+
+  @PostMapping("/expand")
+  public GetContextResponse expand(@RequestBody Map<String, Object> req) throws Exception {
+    String projectRoot = String.valueOf(req.get("project_root"));
+    String nodeId = String.valueOf(req.get("node_id"));
+    
+    CreContext ctx = ProjectManager.getInstance().getContext(Path.of(projectRoot));
+    return new GetContextTool(ctx.graph()).expand(nodeId);
+  }
+
+  @PostMapping("/find_implementations")
+  public List<String> findImplementations(@RequestBody Map<String, Object> req) throws Exception {
+    String projectRoot = String.valueOf(req.get("project_root"));
+    String fqn = String.valueOf(req.get("interface_fqn"));
+    
+    CreContext ctx = ProjectManager.getInstance().getContext(Path.of(projectRoot));
+    return new FindImplementationsTool(ctx.graph()).execute(fqn);
+  }
+
+  @PostMapping("/trace_flow")
+  public List<String> traceFlow(@RequestBody Map<String, Object> req) throws Exception {
+    String projectRoot = String.valueOf(req.get("project_root"));
+    String id = String.valueOf(req.get("entry_method_node_id"));
+    
+    CreContext ctx = ProjectManager.getInstance().getContext(Path.of(projectRoot));
+    return new TraceFlowTool(ctx.graph()).execute(id);
+  }
+
+  @PostMapping("/reset_project")
+  public String resetProject(@RequestBody Map<String, Object> req) {
+    String projectRoot = String.valueOf(req.get("project_root"));
+    ProjectManager.getInstance().resetContext(Path.of(projectRoot));
+    return "Project reset: " + projectRoot;
+  }
+}

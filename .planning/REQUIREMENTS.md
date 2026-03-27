@@ -7,21 +7,21 @@
 
 ### Core Query
 
-- [ ] **QRY-01**: User/AI can address a target method using canonical `Controller.method` format and CRE resolves it deterministically to a method node (including safe handling of overload ambiguity)
+- [-] **QRY-01**: (ABANDONED) User/AI can address a target method using canonical `Controller.method` format and CRE resolves it deterministically to a method node (including safe handling of overload ambiguity)
 
 ### Context Reconstruction
 
-- [ ] **CTX-01**: `get_context` returns structured JSON slice for the resolved method, including sliced code plus metadata (provenance, evidence type/quality, slice boundaries)
-- [ ] **REC-01**: Deterministic reconstruction path builds execution-relevant context for controller → service → reachable implementations using AST-derived graph traversal with Spring semantics hooks
+- [x] **CTX-01**: `get_context` returns structured JSON slice for the resolved method, including sliced code plus metadata (provenance, evidence type/quality, slice boundaries)
+- [x] **REC-01**: Deterministic reconstruction path builds execution-relevant context for controller → service → reachable implementations using AST-derived graph traversal with Spring semantics hooks
 
 ### Expand-on-demand
 
-- [ ] **EXP-01**: `expand(node_id)` widens the slice in a bounded way, replacing placeholders with deeper graph content without causing token/work explosion
+- [x] **EXP-01**: `expand(node_id)` widens the slice in a bounded way, replacing placeholders with deeper graph content without causing token/work explosion
 
 ### Confidence / Explainability / Placeholders
 
-- [ ] **CONF-01**: Every `get_context` response includes confidence + explainability (which steps were deterministic vs heuristic vs gated fallback)
-- [ ] **PLC-01**: When context is missing, CRE emits a stable placeholder contract that specifies what was omitted and what expansion is likely needed
+- [x] **CONF-01**: Every `get_context` response includes confidence + explainability (which steps were deterministic vs heuristic vs gated fallback)
+- [x] **PLC-01**: When context is missing, CRE emits a stable placeholder contract that specifies what was omitted and what expansion is likely needed
 
 ### Plugins / Spring Semantics
 
@@ -29,8 +29,22 @@
 
 ### Tool Surface / Traceability
 
-- [ ] **IMPL-01**: `find_implementations` returns implementations for a service/interface type used in controller → service resolution
-- [ ] **TRCE-01**: `trace_flow` returns a trace/call-chain representation for the reconstructed entry path (controller → service call chain)
+- [x] **IMPL-01**: `find_implementations` returns implementations for a service/interface type used in controller → service resolution
+- [x] **TRCE-01**: `trace_flow` returns a trace/call-chain representation for the reconstructed entry path (controller → service call chain)
+
+
+### Ingestion / Project-wide
+
+- [x] **ING-01**: Support project-wide source discovery and indexing from a directory root (e.g., `src/main/java`) automatically.
+
+### Verification / E2E
+
+- [x] **E2E-01**: End-to-end (E2E) verification on a real target project (`/home/hainn/blue/code/cre-test-project`) to confirm correct symbol resolution and context reconstruction.
+
+### Network / Persistence
+
+- [ ] **HTTP-01**: Provide a REST API for all tools to support manual/interactive testing.
+- [ ] **SSE-01**: Support standard MCP SSE transport for persistent connection and agent integration.
 
 ## v2 Requirements
 
@@ -55,15 +69,17 @@ Which phases cover which requirements. Updated during roadmap creation:
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| QRY-01 | Phase 0 — Prototype | Pending |
-| CTX-01 | Phase 1 — Core System | Pending |
-| REC-01 | Phase 1 — Core System | Pending |
-| EXP-01 | Phase 3 — Expand-on-demand | Pending |
-| CONF-01 | Phase 1 — Core System | Pending |
-| PLC-01 | Phase 1 — Core System | Pending |
+| QRY-01 | Phase 0 — Prototype | Abandoned |
+| CTX-01 | Phase 1 — Core System | Complete |
+| REC-01 | Phase 1 — Core System | Complete |
+| EXP-01 | Phase 3 — Expand-on-demand | Complete |
+| CONF-01 | Phase 1 — Core System | Complete |
+| PLC-01 | Phase 1 — Core System | Complete |
 | PLUG-01 | Phase 2 — Plugin System | Complete |
-| IMPL-01 | Phase 1 — Core System | Pending |
-| TRCE-01 | Phase 1 — Core System | Pending |
+| IMPL-01 | Phase 1 — Core System | Complete |
+| TRCE-01 | Phase 1 — Core System | Complete |
+| ING-01 | Phase 7 — Real-project Ingestion | Complete |
+| E2E-01 | Phase 7 — Real-project Ingestion | Complete |
 
 **Coverage:**
 - v1 requirements: 9 total

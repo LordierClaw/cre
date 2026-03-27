@@ -1,11 +1,11 @@
 package com.cre.core.plugins;
 
+import com.cre.core.ast.AstUtils;
 import com.cre.core.ast.JavaAstIndexer;
 import com.cre.core.graph.GraphEngine;
 import com.cre.core.graph.NodeId;
 import com.cre.core.graph.model.EdgeType;
 import com.cre.core.graph.model.GraphEdge;
-import com.github.javaparser.StaticJavaParser;
 import com.github.javaparser.ast.CompilationUnit;
 import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
 import com.github.javaparser.ast.body.MethodDeclaration;
@@ -43,7 +43,8 @@ public final class ExceptionFlowPlugin implements GraphPlugin {
   public void enrich(GraphEngine graph, Path javaSourceRoot, List<Path> javaFiles) {
     for (Path path : javaFiles) {
       try {
-        CompilationUnit cu = StaticJavaParser.parse(path);
+        CompilationUnit cu = AstUtils.JAVA_PARSER.parse(path).getResult()
+            .orElseThrow(() -> new RuntimeException("Failed to parse " + path));
         String origin = NodeId.normalizeOrigin(path);
         for (var td : cu.getTypes()) {
           if (td instanceof ClassOrInterfaceDeclaration cid) {

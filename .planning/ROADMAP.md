@@ -8,13 +8,14 @@ CRE ships as a Java + Spring Boot MCP server (`stdio`) that resolves short symbo
 
 | Phase | Name | v1 requirements | Summary |
 |-------|------|-----------------|--------|
-| 0 | Prototype | QRY-01 | Resolve `Controller.method` to a method node; seed graph and minimal query path |
+| 0 | Prototype | QRY-01 | (ABANDONED) Resolve `Controller.method` to a method node; seed graph and minimal query path |
 | 1 | Core System | CTX-01, REC-01, CONF-01, PLC-01, IMPL-01, TRCE-01 | Structured `get_context`, deterministic reconstruction path, confidence/placeholders, `find_implementations`, `trace_flow` |
 | 2 | Plugin System | Complete    | 2026-03-25 |
 | 3 | Expand-on-demand | EXP-01 | Bounded `expand(node_id)`; placeholders replaced with deeper content |
 | 4 | Ranking & Pruning | — | Heuristics, depth weighting, noise reduction (no additional v1 IDs) |
 | 5 | Advanced Plugins | — | Event/exception/domain plugins; real-world readiness (no additional v1 IDs) |
-| 6 | Evaluation | — | Measure tokens, accuracy, usability; decide scale vs pivot (no additional v1 IDs) |
+| 6 | Evaluation | — | (ABANDONED) Measure tokens, accuracy, usability; decide scale vs pivot (no additional v1 IDs) |
+| 7 | Real-project Ingestion | ING-01, E2E-01 | Directory-based ingestion and E2E verification on real project |
 
 ## v1 requirement coverage
 
@@ -38,13 +39,15 @@ Every v1 requirement maps to exactly one phase.
 
 **Phase numbering:** Integers 0–6 follow `.docs/WORKPLAN.md`. Decimal phases (e.g. 2.1) are reserved for urgent insertions.
 
-- [ ] **Phase 0: Prototype** — Symbol resolution and minimal graph/query path
+- [-] **Phase 0: Prototype** — (ABANDONED) Symbol resolution and minimal graph/query path
 - [x] **Phase 1: Core System** — Full core MCP context pipeline, reconstruction, trace tools
+- [ ] **Phase 1.1: Project-wide Ingestion** — (MERGED INTO PHASE 7) Automate source discovery and indexing from directory root
 - [x] **Phase 2: Plugin System** — Extensible architecture + Spring semantics plugin (completed 2026-03-25)
-- [ ] **Phase 3: Expand-on-demand** — Bounded expansion API
-- [ ] **Phase 4: Ranking & Pruning** — Heuristic quality and noise control
+- [x] **Phase 3: Expand-on-demand** — Bounded expansion API
+- [x] **Phase 4: Ranking & Pruning** — Heuristic quality and noise control
 - [x] **Phase 5: Advanced Plugins** — Additional plugin classes for production depth (completed 2026-03-25)
-- [ ] **Phase 6: Evaluation** — MVP metrics and decision
+- [-] **Phase 6: Evaluation** — (ABANDONED) MVP metrics and decision
+- [x] **Phase 7: Real-project Ingestion** — Automate discovery + E2E verification (Completed 2026-03-27)
 
 ## Phase details
 
@@ -179,39 +182,46 @@ Plans:
 
 ### Phase 6: Evaluation
 
-**Goal:** Measure MVP success along token reduction, edit correctness, and developer usability; record a continue/pivot decision.
+(ABANDONED)
 
-**Depends on:** Phase 5 (or parallel evaluation harness if phased earlier)
+### Phase 7: Real-project Ingestion
 
-**Requirements:** None (evaluation milestone; metrics align with PROJECT.md “MVP Done Metrics”)
+**Goal:** Automate project-wide source discovery and indexing from a directory root and verify E2E on a real target project.
+
+**Depends on:** Phase 5
+
+**Requirements:** ING-01, E2E-01
 
 **Success criteria** (what must be TRUE):
 
-1. Token usage for representative change tasks is measured against a baseline (e.g. naive RAG or full-file context) with documented methodology.
-2. Accuracy or edit-correctness outcomes are captured for the same tasks using an agreed rubric.
-3. Developer usability (time-to-correct-change, friction in the MCP loop) is assessed and summarized.
-4. A written outcome states whether to continue scaling, adjust scope, or pivot, with pointers to evidence.
+1. `CreContext` automatically indexes all Java files in a provided directory (e.g. `src/main/java`).
+2. E2E tests against `/home/hainn/blue/code/cre-test-project` correctly resolve symbols and reconstruct context.
+3. System behaves deterministically and correctly on the real target codebase.
 
 **Plans:** TBD
 
 Plans:
 
-- [ ] 06-01: TBD — Evaluation harness and report
-
+- [x] 07-01: Automate directory indexing in `CreContext`
+- [x] 07-02: E2E test suite for `cre-test-project`
+- [x] 07-03: Final verification and cleanup
 ## Progress
 
-**Execution order:** 0 → 1 → 2 → 3 → 4 → 5 → 6 (decimals insert in numeric order when used).
+**Execution order:** 0 → 1 → 2 → 3 → 4 → 5 → 6 → 7.
 
 | Phase | Name | Plans complete | Status | Completed |
 |-------|------|----------------|--------|-----------|
-| 0 | Prototype | 0/TBD | Not started | — |
-| 1 | Core System | 0/TBD | Not started | — |
-| 2 | Plugin System | 0/TBD | Not started | — |
-| 3 | Expand-on-demand | 0/TBD | Not started | — |
-| 4 | Ranking & Pruning | 0/TBD | Not started | — |
-| 5 | Advanced Plugins | 1/1 | Complete    | 2026-03-25 |
-| 6 | Evaluation | 0/TBD | Not started | — |
+| 0 | Prototype | 0/TBD | Abandoned | — |
+| 1 | Core System | 1/1 | Complete | 2026-03-25 |
+| 1.1 | Project-wide Ingestion | 0/TBD | Merged | — |
+| 2 | Plugin System | 1/1 | Complete | 2026-03-25 |
+| 3 | Expand-on-demand | 1/1 | Complete | 2026-03-26 |
+| 4 | Ranking & Pruning | 1/1 | Complete | 2026-03-26 |
+| 5 | Advanced Plugins | 1/1 | Complete | 2026-03-25 |
+| 6 | Evaluation | 0/TBD | Abandoned | — |
+| 7 | Real-project Ingestion | 1/1 | Complete | 2026-03-27 |
 
 ---
 
-*Last updated: 2026-03-25 — roadmap derived from `.planning/REQUIREMENTS.md` v1 IDs and `.docs/WORKPLAN.md` phase ordering.*
+*Last updated: 2026-03-27 — roadmap synchronized with execution summaries and planning integrity check.*
+

@@ -6,7 +6,6 @@ import com.cre.core.graph.model.EdgeType;
 import com.cre.core.graph.model.GraphEdge;
 import com.cre.core.graph.model.GraphNode;
 import com.cre.core.graph.model.NodeKind;
-import com.github.javaparser.StaticJavaParser;
 import com.github.javaparser.ast.CompilationUnit;
 import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
 import com.github.javaparser.ast.body.FieldDeclaration;
@@ -41,7 +40,8 @@ public final class JavaAstIndexer {
   public void index(Path path) throws IOException {
     String source = Files.readString(path);
     String origin = NodeId.normalizeOrigin(path);
-    CompilationUnit cu = StaticJavaParser.parse(source);
+    CompilationUnit cu = AstUtils.JAVA_PARSER.parse(source).getResult()
+        .orElseThrow(() -> new RuntimeException("Failed to parse " + path));
     for (TypeDeclaration<?> td : cu.getTypes()) {
       if (td instanceof ClassOrInterfaceDeclaration cid) {
         indexType(cid, cu, origin);

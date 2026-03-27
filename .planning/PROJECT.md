@@ -14,11 +14,13 @@ Enable accurate code changes with drastically fewer tokens by progressively reco
 
 <!-- Shipped and confirmed valuable. -->
 - [x] **EXP-01**: Bounded `expand(node_id)` widens slices on demand (Validated in Phase 03: Expand-on-demand)
+- [x] **ING-01**: Directory-based project ingestion (Validated in Phase 07: Real-project Ingestion)
+- [x] **E2E-01**: E2E verification on real project (Validated in Phase 07: Real-project Ingestion)
 
 ### Active
 
 <!-- Current scope. Building toward these. -->
-- [ ] MVP v1 scope is being defined via requirements generation (see `.planning/REQUIREMENTS.md`)
+- [ ] v1 Readiness and Documentation Cleanup
 
 ### Out of Scope
 
@@ -63,6 +65,7 @@ Enable accurate code changes with drastically fewer tokens by progressively reco
 | Java toolchain: Corretto 21 | Ensures consistent AST parsing and runtime expectations | ✓ Good |
 | Build tool: Maven | Aligns with your environment and v1 packaging workflow | ✓ Good |
 | Spring Boot major: 3.x | Required baseline for annotation/plugin mapping | ✓ Good |
+| Abandon Phase 0 & 6 | Pivot toward new requirements; Phase 0 redundant as Phase 1 is complete | ✓ Done |
 
 ## Evolution
 

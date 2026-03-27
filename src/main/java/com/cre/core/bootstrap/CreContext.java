@@ -6,10 +6,17 @@ import com.cre.core.plugins.PluginRegistry;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Stream;
 
 public final class CreContext {
+
+  private static final Set<String> DEFAULT_EXCLUSIONS = Set.of(
+      ".git", "target", "build", ".gradle", ".idea", ".settings", "bin", "out", "node_modules"
+  );
 
   private final GraphEngine graph;
   private final Path javaSourceRoot;
@@ -25,6 +32,32 @@ public final class CreContext {
 
   public Path javaSourceRoot() {
     return javaSourceRoot;
+  }
+
+  public static CreContext fromDirectory(Path projectRoot, boolean pluginsEnabled) throws IOException {
+    Path sourceRoot = projectRoot.resolve("src/main/java");
+    if (!Files.exists(sourceRoot)) {
+      sourceRoot = projectRoot;
+    }
+
+    List<Path> javaFiles = new ArrayList<>();
+    try (Stream<Path> walk = Files.walk(projectRoot)) {
+      walk.filter(p -> p.toString().endsWith(".java"))
+          .filter(p -> !shouldExclude(projectRoot, p))
+          .forEach(javaFiles::add);
+    }
+
+    return fromJavaSourceRoot(sourceRoot, pluginsEnabled, javaFiles.toArray(new Path[0]));
+  }
+
+  private static boolean shouldExclude(Path root, Path p) {
+    Path relative = root.relativize(p);
+    for (Path part : relative) {
+      if (DEFAULT_EXCLUSIONS.contains(part.toString())) {
+        return true;
+      }
+    }
+    return false;
   }
 
   public static CreContext fromJavaSourceRoot(Path javaSourceRoot, Path... javaFiles) throws IOException {

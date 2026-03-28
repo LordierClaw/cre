@@ -39,7 +39,11 @@ public final class JavaAstIndexer {
 
   public void index(Path path) throws IOException {
     String source = Files.readString(path);
-    String origin = NodeId.normalizeOrigin(path);
+    // Relativize against root if possible
+    Path relative = javaSourceRoot.isAbsolute() && path.isAbsolute() 
+        ? javaSourceRoot.relativize(path) 
+        : path;
+    String origin = NodeId.normalizeOrigin(relative);
     CompilationUnit cu = AstUtils.JAVA_PARSER.parse(source).getResult()
         .orElseThrow(() -> new RuntimeException("Failed to parse " + path));
     for (TypeDeclaration<?> td : cu.getTypes()) {
@@ -173,7 +177,7 @@ public final class JavaAstIndexer {
   }
 
   private String originForFqn(String typeFqn) {
-    return NodeId.normalizeOrigin(javaSourceRoot.resolve(typeFqn.replace('.', '/') + ".java"));
+    return NodeId.normalizeOrigin(Path.of(typeFqn.replace('.', '/') + ".java"));
   }
 
   private Optional<String> resolveScopeTypeFqn(

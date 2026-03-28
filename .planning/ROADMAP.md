@@ -18,6 +18,8 @@ CRE ships as a Java + Spring Boot MCP server (`stdio`) that resolves short symbo
 | 7 | Real-project Ingestion | ING-01, E2E-01 | Directory-based ingestion and E2E verification on real project |
 | 8 | HTTP/SSE & REST Support | — | Transition to persistent Spring Boot server with SSE/REST transport |
 | 9 | Output Format Optimization | — | Compact, file-centric integrated view with XML placeholders |
+| 10 | Enhanced XML Context Wrapping | — | Refined output format with descriptive tags and NodeId wrapping |
+| 11 | Raw Text & XML Output Migration | — | Migrate from JSON to raw text + XML for token efficiency |
 
 ## v1 requirement coverage
 
@@ -51,6 +53,8 @@ Every v1 requirement maps to exactly one phase.
 - [-] **Phase 6: Evaluation** — (ABANDONED) MVP metrics and decision
 - [x] **Phase 7: Real-project Ingestion** — Automate discovery + E2E verification (Completed 2026-03-27)
 - [x] **Phase 8: HTTP/SSE & REST Support** — Transition to persistent Spring Boot server with SSE/REST transport (Completed 2026-03-27)
+- [x] **Phase 9: Output Format Optimization** — Compact XML-tagged output format (Completed 2026-03-28)
+- [ ] **Phase 10: Enhanced XML Context Wrapping** — Refined semantic XML wrapping and descriptive placeholders
 
 ## Phase details
 
@@ -225,13 +229,32 @@ Plans:
 
 **Plans:**
 
-- [ ] 09-01-PLAN.md — Optimized Output Models & Builder Infrastructure
-- [ ] 09-02-PLAN.md — AST Transformation & Placeholder Logic
-- [ ] 09-03-PLAN.md — System Integration & E2E Validation
+- [x] 09-01-PLAN.md — Optimized Output Models & Builder Infrastructure
+- [x] 09-02-PLAN.md — AST Transformation & Placeholder Logic
+- [x] 09-03-PLAN.md — System Integration & E2E Validation
+
+### Phase 10: Enhanced XML Context Wrapping
+
+**Goal:** Refine the output format of `get_context` with semantic XML wrapping, hierarchical boundaries, and descriptive placeholders to improve scanability for LLMs.
+
+**Depends on:** Phase 9
+
+**Requirements:** None (Quality/Usability improvement)
+
+**Success criteria** (what must be TRUE):
+1. Output includes multi-layer XML wrapping: `<ClassName.MemberName>` (outer) and `<ClassName>` (inner).
+2. Omissions are grouped by category: `<ommitted_import/>`, `<ommitted_properties/>`, and `<ommitted_functions/>`.
+3. Call-site omissions use the descriptive format `<ommitted_code id="..." description=""/>`.
+4. Original code indentation is preserved using `LexicalPreservingPrinter`.
+
+**Plans:**
+
+- [ ] 10-01-PLAN.md — Core Builder Refactoring (Lexical Preservation & Grouping)
+- [ ] 10-02-PLAN.md — Hierarchical Wrapping & Tool Integration
 
 ## Progress
 
-**Execution order:** 0 → 1 → 2 → 3 → 4 → 5 → 6 → 7.
+**Execution order:** 0 → 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9 → 10.
 
 | Phase | Name | Plans complete | Status | Completed |
 |-------|------|----------------|--------|-----------|
@@ -245,7 +268,9 @@ Plans:
 | 6 | Evaluation | 0/TBD | Abandoned | — |
 | 7 | Real-project Ingestion | 1/1 | Complete | 2026-03-27 |
 | 8 | HTTP/SSE & REST Support | 1/1 | Complete | 2026-03-27 |
-| 9 | Output Format Optimization | 0/3 | Ready | — |
+| 9 | Output Format Optimization | 1/1 | Complete | 2026-03-28 |
+| 10 | Enhanced XML Context Wrapping | 0/2 | Ready | — |
+| 11 | Raw Text & XML Output Migration | 0/TBD | Ready | — |
 
 ---
 

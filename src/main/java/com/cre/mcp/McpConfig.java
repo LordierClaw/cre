@@ -94,7 +94,7 @@ public class McpConfig {
   private static CallToolResult handleGetContext(McpSyncServerExchange ex, CallToolRequest req) {
     try {
       CreContext ctx = getContext(req);
-      GetContextTool tool = new GetContextTool(ctx.graph());
+      GetContextTool tool = new GetContextTool(ctx);
       Map<String, Object> a = req.arguments();
       String nodeId = String.valueOf(a.get("node_id"));
       int depth = 0;
@@ -102,7 +102,7 @@ public class McpConfig {
       if (d instanceof Number n) {
         depth = n.intValue();
       }
-      String payload = JSON.writeValueAsString(tool.execute(nodeId, depth));
+      String payload = tool.execute(nodeId, depth);
       return CallToolResult.builder().addTextContent(payload).build();
     } catch (Exception e) {
       return CallToolResult.builder().isError(true).addTextContent(e.getMessage()).build();
@@ -112,9 +112,9 @@ public class McpConfig {
   private static CallToolResult handleExpand(McpSyncServerExchange ex, CallToolRequest req) {
     try {
       CreContext ctx = getContext(req);
-      GetContextTool tool = new GetContextTool(ctx.graph());
+      GetContextTool tool = new GetContextTool(ctx);
       String nodeId = String.valueOf(req.arguments().get("node_id"));
-      String payload = JSON.writeValueAsString(tool.expand(nodeId));
+      String payload = tool.expand(nodeId);
       return CallToolResult.builder().addTextContent(payload).build();
     } catch (Exception e) {
       return CallToolResult.builder().isError(true).addTextContent(e.getMessage()).build();

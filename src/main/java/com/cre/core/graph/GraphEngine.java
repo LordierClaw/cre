@@ -25,6 +25,7 @@ public final class GraphEngine {
   private final Map<String, Set<NodeId>> interfaceToImplementors = new ConcurrentHashMap<>();
   private final Map<NodeId, List<GraphEdge>> outgoingCallsIndex = new ConcurrentHashMap<>();
   private final Map<NodeId, List<GraphEdge>> incomingCallsIndex = new ConcurrentHashMap<>();
+  private final Map<NodeId, List<GraphEdge>> outgoingEdgesIndex = new ConcurrentHashMap<>();
 
   private volatile boolean springSemanticsPresent = true;
   private volatile boolean springSemanticsComplete = true;
@@ -41,6 +42,9 @@ public final class GraphEngine {
     synchronized (edges) {
       edges.add(edge);
     }
+    outgoingEdgesIndex
+        .computeIfAbsent(edge.from(), ignored -> Collections.synchronizedList(new ArrayList<>()))
+        .add(edge);
     if (edge.type() == EdgeType.CALLS) {
       outgoingCallsIndex
           .computeIfAbsent(edge.from(), ignored -> Collections.synchronizedList(new ArrayList<>()))
@@ -91,6 +95,18 @@ public final class GraphEngine {
     }
     synchronized (list) {
       return list.stream().sorted(Comparator.comparing(GraphEdge::from)).toList();
+    }
+  }
+
+  public List<GraphEdge> edgesFrom(NodeId from) {
+    List<GraphEdge> list = outgoingEdgesIndex.get(from);
+    if (list == null || list.isEmpty()) {
+      return List.of();
+    }
+    synchronized (list) {
+      return list.stream()
+          .sorted(Comparator.comparing(GraphEdge::to).thenComparing(GraphEdge::type))
+          .toList();
     }
   }
 

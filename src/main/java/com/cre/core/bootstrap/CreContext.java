@@ -12,7 +12,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Stream;
 
-public final class CreContext {
+public class CreContext {
 
   private static final Set<String> DEFAULT_EXCLUSIONS = Set.of(
       ".git", "target", "build", ".gradle", ".idea", ".settings", "bin", "out", "node_modules"
@@ -21,7 +21,7 @@ public final class CreContext {
   private final GraphEngine graph;
   private final Path javaSourceRoot;
 
-  private CreContext(GraphEngine graph, Path javaSourceRoot) {
+  public CreContext(GraphEngine graph, Path javaSourceRoot) {
     this.graph = graph;
     this.javaSourceRoot = javaSourceRoot;
   }

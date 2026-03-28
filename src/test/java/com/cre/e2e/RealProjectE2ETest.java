@@ -7,7 +7,6 @@ import com.cre.core.bootstrap.ProjectManager;
 import com.cre.core.graph.NodeId;
 import com.cre.testsupport.GraphTestSupport;
 import com.cre.tools.GetContextTool;
-import com.cre.tools.model.GetContextResponse;
 import java.io.IOException;
 import java.nio.file.Path;
 import org.junit.jupiter.api.Test;
@@ -36,9 +35,11 @@ class RealProjectE2ETest {
     assertThat(searchMethod).isNotNull();
 
     // 3. Reconstruct context
-    GetContextResponse resp = new GetContextTool(testCtx.graph()).execute(searchMethod.toString(), 1);
-    assertThat(resp.nodes()).isNotEmpty();
-    assertThat(resp.slicedCode().stream().anyMatch(s -> s.get("text").toString().contains("bookSearchService.searchBooks"))).isTrue();
+    String resp = new GetContextTool(testCtx).execute(searchMethod.toString(), 1);
+    assertThat(resp).contains("<file origin=");
+    assertThat(resp).contains("<BookSearchController.searchBooks>");
+    assertThat(resp).contains("<BookSearchController>");
+    assertThat(resp).contains("bookSearchService.searchBooks");
 
     // 4. Verify Caching (same instance)
     CreContext testCtx2 = ProjectManager.getInstance().getContext(testProjectRoot);

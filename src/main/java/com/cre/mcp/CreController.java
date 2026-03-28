@@ -5,7 +5,6 @@ import com.cre.core.bootstrap.ProjectManager;
 import com.cre.tools.FindImplementationsTool;
 import com.cre.tools.GetContextTool;
 import com.cre.tools.TraceFlowTool;
-import com.cre.tools.model.GetContextResponse;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
@@ -25,7 +24,7 @@ public class CreController {
   }
 
   @PostMapping("/get_context")
-  public GetContextResponse getContext(@RequestBody Map<String, Object> req) throws Exception {
+  public String getContext(@RequestBody Map<String, Object> req) throws Exception {
     String projectRoot = String.valueOf(req.get("project_root"));
     String nodeId = String.valueOf(req.get("node_id"));
     int depth = 0;
@@ -34,16 +33,16 @@ public class CreController {
     }
     
     CreContext ctx = projectManager.getContext(Path.of(projectRoot));
-    return new GetContextTool(ctx.graph()).execute(nodeId, depth);
+    return new GetContextTool(ctx).execute(nodeId, depth);
   }
 
   @PostMapping("/expand")
-  public GetContextResponse expand(@RequestBody Map<String, Object> req) throws Exception {
+  public String expand(@RequestBody Map<String, Object> req) throws Exception {
     String projectRoot = String.valueOf(req.get("project_root"));
     String nodeId = String.valueOf(req.get("node_id"));
     
     CreContext ctx = projectManager.getContext(Path.of(projectRoot));
-    return new GetContextTool(ctx.graph()).expand(nodeId);
+    return new GetContextTool(ctx).expand(nodeId);
   }
 
   @PostMapping("/find_implementations")

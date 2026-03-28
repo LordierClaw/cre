@@ -36,7 +36,7 @@ public final class RankingPruner {
   public static final int DEFAULT_SCORE_FLOOR = 500;
   public static final int MAX_MILLISCORE = 2_000_000;
 
-  private static final List<String> SCORE_COMPONENTS =
+  public static final List<String> SCORE_COMPONENTS =
       List.of("depth_decay", "edge_type", "uses_field", "degree");
 
   private RankingPruner() {}

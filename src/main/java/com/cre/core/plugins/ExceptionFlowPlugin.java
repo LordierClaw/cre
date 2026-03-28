@@ -45,7 +45,10 @@ public final class ExceptionFlowPlugin implements GraphPlugin {
       try {
         CompilationUnit cu = AstUtils.JAVA_PARSER.parse(path).getResult()
             .orElseThrow(() -> new RuntimeException("Failed to parse " + path));
-        String origin = NodeId.normalizeOrigin(path);
+        Path relative = javaSourceRoot.isAbsolute() && path.isAbsolute()
+            ? javaSourceRoot.relativize(path)
+            : path;
+        String origin = NodeId.normalizeOrigin(relative);
         for (var td : cu.getTypes()) {
           if (td instanceof ClassOrInterfaceDeclaration cid) {
             enrichType(graph, javaSourceRoot, cid, cu, origin);
@@ -123,7 +126,7 @@ public final class ExceptionFlowPlugin implements GraphPlugin {
   }
 
   private String originForFqn(String typeFqn, Path javaSourceRoot) {
-    return NodeId.normalizeOrigin(javaSourceRoot.resolve(typeFqn.replace('.', '/') + ".java"));
+    return NodeId.normalizeOrigin(Path.of(typeFqn.replace('.', '/') + ".java"));
   }
 
   private Optional<String> resolveScopeTypeFqn(

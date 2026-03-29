@@ -18,6 +18,6 @@ class GetContextSchemaTest {
     String resp = new GetContextTool(ctx).execute(node.toString(), 0);
 
     assertThat(resp).contains("<file origin=");
-    assertThat(resp).contains("<UserController.getUser>");
+    assertThat(resp).contains("<UserController>");
   }
 }

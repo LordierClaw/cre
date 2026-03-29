@@ -35,11 +35,9 @@ class IntegratedViewBuilderTest {
         Set.of(retainedMethod),
         Set.of(prunedField),
         ctx.graph(),
-        sourceRoot,
-        retainedMethod);
+        sourceRoot);
 
     assertThat(result).contains("<file origin=\"com/cre/fixtures/UserController.java\">");
-    assertThat(result).contains("<UserController.getUser>");
     assertThat(result).contains("<UserController>");
     assertThat(result).contains("public String getUser(String id)");
     assertThat(result).contains("<ommitted_properties/>");
@@ -61,8 +59,7 @@ class IntegratedViewBuilderTest {
         Set.of(userControllerMethod),
         Set.of(userServiceMethod),
         ctx.graph(),
-        sourceRoot,
-        userControllerMethod);
+        sourceRoot);
 
     assertThat(result).contains("<ommitted_code id=\"ommitted_01\" description=\"\"/>");
     assertThat(result).contains("ommitted_01: com.cre.fixtures.UserService::getUser(String)::com/cre/fixtures/UserService.java");
@@ -87,8 +84,7 @@ class IntegratedViewBuilderTest {
         Set.of(getUser),
         Set.of(prunedNode),
         ctx.graph(),
-        sourceRoot,
-        getUser);
+        sourceRoot);
 
     assertThat(result).contains("<ommitted_functions/>");
   }
@@ -108,8 +104,7 @@ class IntegratedViewBuilderTest {
         Set.of(getUser),
         Set.of(restController),
         ctx.graph(),
-        sourceRoot,
-        getUser);
+        sourceRoot);
 
     assertThat(result).contains("<ommitted_import/>");
     assertThat(result).doesNotContain("import org.springframework.web.bind.annotation.RestController;");

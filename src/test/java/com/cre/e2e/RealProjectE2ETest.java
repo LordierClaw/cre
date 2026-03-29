@@ -37,7 +37,6 @@ class RealProjectE2ETest {
     // 3. Reconstruct context
     String resp = new GetContextTool(testCtx).execute(searchMethod.toString(), 1);
     assertThat(resp).contains("<file origin=");
-    assertThat(resp).contains("<BookSearchController.searchBooks>");
     assertThat(resp).contains("<BookSearchController>");
     assertThat(resp).contains("bookSearchService.searchBooks");
 

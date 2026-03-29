@@ -41,7 +41,7 @@ public final class GetContextTool {
 
     IntegratedViewBuilder builder = new IntegratedViewBuilder();
     return builder.build(
-        pruned.retainedSet(), pruned.prunedSet(), graph, context.javaSourceRoot(), startNode);
+        pruned.retainedSet(), pruned.prunedSet(), graph, context.javaSourceRoot());
   }
 
   public String expand(String nodeIdRaw) {
@@ -53,7 +53,7 @@ public final class GetContextTool {
 
     IntegratedViewBuilder builder = new IntegratedViewBuilder();
     return builder.build(
-        pruned.retainedSet(), pruned.prunedSet(), graph, context.javaSourceRoot(), anchor);
+        pruned.retainedSet(), pruned.prunedSet(), graph, context.javaSourceRoot());
   }
 
   private NodeId resolveNodeId(String raw) {

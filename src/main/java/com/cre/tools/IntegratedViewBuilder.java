@@ -42,10 +42,8 @@ public class IntegratedViewBuilder {
       Set<NodeId> retained,
       Set<NodeId> pruned,
       GraphEngine graph,
-      Path javaSourceRoot,
-      NodeId anchor) {
+      Path javaSourceRoot) {
     
-    String anchorTag = calculateAnchorTag(anchor);
     Set<String> allOrigins = new HashSet<>();
     retained.forEach(id -> allOrigins.add(id.sourceOrigin()));
     pruned.forEach(id -> allOrigins.add(id.sourceOrigin()));
@@ -107,9 +105,6 @@ public class IntegratedViewBuilder {
         code = code.replaceAll("int\\s+CRE_OMITTED_(ommitted_\\d+);", "<$1/>");
         code = code.replaceAll("CRE_OMITTED_(ommitted_\\d+)", "<$1/>");
 
-        // 4. Wrap the entire file in the anchor tag
-        code = "<" + anchorTag + ">\n" + code + "\n</" + anchorTag + ">";
-
         filesContent.append("<file origin=\"").append(origin).append("\">\n")
             .append(code).append("\n</file>\n\n");
       } catch (IOException e) {
@@ -127,30 +122,6 @@ public class IntegratedViewBuilder {
     
     sb.append(filesContent);
     return sb.toString().trim();
-  }
-
-  private String calculateAnchorTag(NodeId anchor) {
-    String fqn = anchor.fullyQualifiedType();
-    String className = fqn.substring(fqn.lastIndexOf('.') + 1);
-    String signature = anchor.memberSignature();
-    
-    if (signature.equals("<type>")) {
-      return className;
-    }
-    
-    String memberName;
-    if (signature.startsWith("field:")) {
-      memberName = signature.substring(6);
-    } else {
-      // It's a method/constructor like doSomething(String)
-      int paren = signature.indexOf('(');
-      if (paren > 0) {
-        memberName = signature.substring(0, paren);
-      } else {
-        memberName = signature;
-      }
-    }
-    return className + "." + memberName;
   }
 
   private boolean transform(

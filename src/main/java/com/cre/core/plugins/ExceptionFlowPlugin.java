@@ -3,7 +3,6 @@ package com.cre.core.plugins;
 import com.cre.core.ast.AstUtils;
 import com.cre.core.ast.JavaAstIndexer;
 import com.cre.core.graph.GraphEngine;
-import com.cre.core.graph.NodeId;
 import com.cre.core.graph.model.EdgeType;
 import com.cre.core.graph.model.GraphEdge;
 import com.github.javaparser.ast.CompilationUnit;
@@ -45,13 +44,9 @@ public final class ExceptionFlowPlugin implements GraphPlugin {
       try {
         CompilationUnit cu = AstUtils.JAVA_PARSER.parse(path).getResult()
             .orElseThrow(() -> new RuntimeException("Failed to parse " + path));
-        Path relative = javaSourceRoot.isAbsolute() && path.isAbsolute()
-            ? javaSourceRoot.relativize(path)
-            : path;
-        String origin = NodeId.normalizeOrigin(relative);
         for (var td : cu.getTypes()) {
           if (td instanceof ClassOrInterfaceDeclaration cid) {
-            enrichType(graph, javaSourceRoot, cid, cu, origin);
+            enrichType(graph, cid, cu);
           }
         }
       } catch (IOException ignored) {
@@ -62,16 +57,14 @@ public final class ExceptionFlowPlugin implements GraphPlugin {
 
   private void enrichType(
       GraphEngine graph,
-      Path javaSourceRoot,
       ClassOrInterfaceDeclaration cid,
-      CompilationUnit cu,
-      String origin) {
+      CompilationUnit cu) {
     String fqName = resolveTypeFqName(cid, cu);
     for (MethodDeclaration md : cid.getMethods()) {
       if (md.getBody().isEmpty()) {
         continue;
       }
-      NodeId fromId = new NodeId(fqName, JavaAstIndexer.methodSignature(md), origin);
+      String fromId = fqName + "::" + JavaAstIndexer.methodSignature(md);
       if (graph.node(fromId) == null) {
         continue;
       }
@@ -83,7 +76,7 @@ public final class ExceptionFlowPlugin implements GraphPlugin {
       for (TryStmt tryStmt : md.findAll(TryStmt.class)) {
         for (CatchClause cc : tryStmt.getCatchClauses()) {
           for (MethodCallExpr call : cc.getBody().findAll(MethodCallExpr.class)) {
-            resolveCallee(call, cid, cu, paramTypes, javaSourceRoot)
+            resolveCallee(call, cid, cu, paramTypes)
                 .ifPresent(
                     callee -> {
                       String key = fromId + "|" + callee + "|" + EdgeType.CATCH_INVOKES;
@@ -97,14 +90,13 @@ public final class ExceptionFlowPlugin implements GraphPlugin {
     }
   }
 
-  // --- Call resolution (aligned with JavaAstIndexer; keep in sync for deterministic NodeIds) ---
+  // --- Call resolution (aligned with JavaAstIndexer; keep in sync for deterministic IDs) ---
 
-  private Optional<NodeId> resolveCallee(
+  private Optional<String> resolveCallee(
       MethodCallExpr call,
       ClassOrInterfaceDeclaration clazz,
       CompilationUnit cu,
-      Map<String, String> paramTypes,
-      Path javaSourceRoot) {
+      Map<String, String> paramTypes) {
     Optional<String> calleeTypeFqn =
         call.getScope().map(s -> resolveScopeTypeFqn(s, clazz, cu)).orElse(Optional.empty());
 
@@ -121,12 +113,7 @@ public final class ExceptionFlowPlugin implements GraphPlugin {
                 .collect(Collectors.joining(","))
             + ")";
 
-    String calleeOrigin = originForFqn(calleeTypeFqn.get(), javaSourceRoot);
-    return Optional.of(new NodeId(calleeTypeFqn.get(), signature, calleeOrigin));
-  }
-
-  private String originForFqn(String typeFqn, Path javaSourceRoot) {
-    return NodeId.normalizeOrigin(Path.of(typeFqn.replace('.', '/') + ".java"));
+    return Optional.of(calleeTypeFqn.get() + "::" + signature);
   }
 
   private Optional<String> resolveScopeTypeFqn(

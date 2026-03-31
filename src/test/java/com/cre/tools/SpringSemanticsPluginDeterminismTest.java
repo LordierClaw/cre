@@ -41,9 +41,8 @@ class SpringSemanticsPluginDeterminismTest {
             .anyMatch(
                 e ->
                     e.type() == EdgeType.DEPENDS_ON
-                        && e.from().fullyQualifiedType().equals("com.cre.fixtures.UserController")
-                        && e.to().fullyQualifiedType().equals("com.cre.fixtures.UserService"));
+                        && e.from().equals("com.cre.fixtures.UserController")
+                        && e.to().equals("com.cre.fixtures.UserService"));
     assertThat(hasDepends).isTrue();
   }
 }
-

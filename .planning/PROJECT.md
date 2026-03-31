@@ -11,38 +11,25 @@ Enable accurate code changes with drastically fewer tokens by progressively reco
 ## Shipped Versions
 
 - **v1.0 (2026-03-29):** Core MCP server, AST graph, Spring/Exception plugins, Heuristic ranking/pruning, Raw Text/XML Migration, SSE/REST support.
+- **v2.0 (2026-03-31):** Redesign & Efficiency. Spring DI, exploration tools, optimized XML output, symbol-based resolution, robust exception handling.
 
 ## Requirements
 
-### Validated (v1.0)
+### Validated (v2.0)
 
-<!-- Shipped and confirmed valuable. -->
-- [x] **EXP-01**: Bounded `expand(node_id)` widens slices on demand
-- [x] **ING-01**: Directory-based project ingestion
-- [x] **E2E-01**: E2E verification on real project
-- [x] **CTX-01**: Structured context reconstruction
-- [x] **REC-01**: Deterministic traversal (Controller -> Service -> Impl)
-- [x] **PLUG-01**: Plugin system for Spring semantics
-- [x] **IMPL-01**: Implementation discovery
-- [x] **TRCE-01**: Call flow traceability
-- [x] **HTTP-01**: REST API support
-- [x] **SSE-01**: MCP-over-SSE support
-
-### Active (v1.1)
-
-<!-- Current scope. Building toward these. -->
-- [ ] TBD: Performance & Scale
-- [ ] TBD: Developer Dashboard
+- [x] **REF-02**: Core engine refactoring (Spring DI, centralized services, removal of ranking/pruning)
+- [x] **CORE-02**: Enhanced exploration tools (`get_project_structure`, `get_file_structure`)
+- [x] **CTX-02**: Optimized context output (XML-like tagging, depth-based expansion, granular options)
+- [x] **BUG-02**: Robustness improvements (Standardized exceptions, commented code handling)
 
 ## Context
 
 - Product goal: replace RAG with structure-aware context reconstruction for code editing/changes.
-- Core approach: deterministic -> heuristic -> AI fallback, with strict core/plugin separation.
-- Graph model: classes/methods/fields with edges like `CALLS`, `USES_FIELD`, and `BELONGS_TO`.
+- Core approach: deterministic traversal with expansion on demand (v2.0 simplified this by removing heuristics).
+- Graph model: classes/methods/fields with string-based identifiers (Symbols).
 - Replace-on-demand: unknown/complex parts are represented initially (placeholders) and later replaced via deeper graph traversal and/or plugins.
-- Expand-on-demand: the user/agent requests deeper traversal via an `expand(node_id)`-style API when additional context is needed.
-- Ranking-and-pruning: context slices are prioritized with deterministic weighted heuristics and bounded top-k/score-floor pruning.
-- Output format: token-optimized raw text + hierarchical XML wrapping.
+- Expand-on-demand: the user/agent requests deeper traversal via higher `depth` in `get_context`.
+- Output format: token-optimized XML-like tagging for structured code blocks.
 
 ## Constraints
 
@@ -50,7 +37,7 @@ Enable accurate code changes with drastically fewer tokens by progressively reco
 - **Build Tool**: Maven
 - **JDK**: Corretto 21
 - **MCP Transport**: stdio, SSE
-- **Output Format**: Raw text + XML
+- **Output Format**: Token-optimized XML-like tagging
 
 ## Key Decisions
 
@@ -59,11 +46,24 @@ Enable accurate code changes with drastically fewer tokens by progressively reco
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| Identity-based NodeId | FQN + signature + normalized path (no lines) ensures stability | ✓ Good |
+| Identity-based NodeId | FQN + signature + normalized path (no lines) ensures stability | ✓ Deprecated |
 | Hierarchical XML Wrapping | Switched to XML tags for code blocks to improve agent readability | ✓ Good |
 | Raw Text Migration | Abandoned structured JSON payloads in favor of raw text to save tokens | ✓ Good |
 | ProjectManager Cache | Implemented 2-hour TTL cache to support multi-project 24/7 runtime | ✓ Good |
 | Abandon Phase 0 & 6 | Focused development on high-value reconstruction and ingestion | ✓ Done |
+</details>
+
+<details>
+<summary><b>v2.0 Decisions</b></summary>
+
+| Decision | Rationale | Outcome |
+|----------|-----------|---------|
+| Remove Heuristic Ranking | Deterministic traversal + expansion on demand is more predictable for agents | ✓ Good |
+| Tool Simplification | Consolidating into `get_context` and structure tools reduces complexity | ✓ Good |
+| XML-like Class Tagging | Further improves token efficiency and structured readability | ✓ Good |
+| Spring DI for ProjectManager | Improves maintainability and testability | ✓ Good |
+| Symbol-based Resolution | Human-readable symbols are easier for agents to manage than complex IDs | ✓ Good |
+| Selective Comment Pruning | Keeping only Javadoc saves significant tokens while preserving semantics | ✓ Good |
 </details>
 
 ---

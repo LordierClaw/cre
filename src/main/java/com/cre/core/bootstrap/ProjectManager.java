@@ -1,10 +1,14 @@
 package com.cre.core.bootstrap;
 
+import com.cre.core.exception.CreException;
+import com.cre.core.exception.ProjectNotFoundException;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -18,32 +22,25 @@ import org.springframework.stereotype.Service;
 public final class ProjectManager {
 
   private static final Logger log = LoggerFactory.getLogger(ProjectManager.class);
-  private static ProjectManager INSTANCE;
   private static final Duration TTL = Duration.ofHours(2);
 
   private final Map<Path, CachedContext> cache = new ConcurrentHashMap<>();
 
   public ProjectManager() {
-    INSTANCE = this;
   }
 
-  /**
-   * @deprecated Use dependency injection.
-   */
-  @Deprecated
-  public static ProjectManager getInstance() {
-    if (INSTANCE == null) {
-      INSTANCE = new ProjectManager();
-    }
-    return INSTANCE;
-  }
-
-  public CreContext getContext(Path projectRoot) throws IOException {
+  public CreContext getContext(Path projectRoot) throws CreException {
     return getContext(projectRoot, true);
   }
 
-  public CreContext getContext(Path projectRoot, boolean pluginsEnabled) throws IOException {
+  public CreContext getContext(Path projectRoot, boolean pluginsEnabled) throws CreException {
+    Objects.requireNonNull(projectRoot, "projectRoot must not be null");
     Path absRoot = projectRoot.toAbsolutePath().normalize();
+    
+    if (!Files.exists(absRoot) || !Files.isDirectory(absRoot)) {
+      throw new ProjectNotFoundException(absRoot);
+    }
+
     CachedContext cached = cache.get(absRoot);
     
     if (cached != null && !cached.isExpired()) {
@@ -59,16 +56,21 @@ public final class ProjectManager {
 
       log.info("Indexing project at: {}", absRoot);
       long start = System.currentTimeMillis();
-      CreContext ctx = CreContext.fromDirectory(absRoot, pluginsEnabled);
-      long end = System.currentTimeMillis();
-      log.info("Indexing completed in {} ms for project: {}", (end - start), absRoot);
-      
-      cache.put(absRoot, new CachedContext(ctx, Instant.now()));
-      return ctx;
+      try {
+        CreContext ctx = CreContext.fromDirectory(absRoot, pluginsEnabled);
+        long end = System.currentTimeMillis();
+        log.info("Indexing completed in {} ms for project: {}", (end - start), absRoot);
+        
+        cache.put(absRoot, new CachedContext(ctx, Instant.now()));
+        return ctx;
+      } catch (IOException e) {
+        throw new CreException("Failed to index project: " + absRoot, e);
+      }
     }
   }
 
   public void resetContext(Path projectRoot) {
+    Objects.requireNonNull(projectRoot, "projectRoot must not be null");
     Path absRoot = projectRoot.toAbsolutePath().normalize();
     cache.remove(absRoot);
     log.info("Context reset for project: {}", absRoot);

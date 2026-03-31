@@ -20,12 +20,12 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public final class GraphEngine {
 
-  private final Map<NodeId, GraphNode> nodes = new ConcurrentHashMap<>();
+  private final Map<String, GraphNode> nodes = new ConcurrentHashMap<>();
   private final List<GraphEdge> edges = Collections.synchronizedList(new ArrayList<>());
-  private final Map<String, Set<NodeId>> interfaceToImplementors = new ConcurrentHashMap<>();
-  private final Map<NodeId, List<GraphEdge>> outgoingCallsIndex = new ConcurrentHashMap<>();
-  private final Map<NodeId, List<GraphEdge>> incomingCallsIndex = new ConcurrentHashMap<>();
-  private final Map<NodeId, List<GraphEdge>> outgoingEdgesIndex = new ConcurrentHashMap<>();
+  private final Map<String, Set<String>> interfaceToImplementors = new ConcurrentHashMap<>();
+  private final Map<String, List<GraphEdge>> outgoingCallsIndex = new ConcurrentHashMap<>();
+  private final Map<String, List<GraphEdge>> incomingCallsIndex = new ConcurrentHashMap<>();
+  private final Map<String, List<GraphEdge>> outgoingEdgesIndex = new ConcurrentHashMap<>();
 
   private volatile boolean springSemanticsPresent = true;
   private volatile boolean springSemanticsComplete = true;
@@ -55,11 +55,11 @@ public final class GraphEngine {
     }
   }
 
-  public GraphNode node(NodeId id) {
+  public GraphNode node(String id) {
     return nodes.get(id);
   }
 
-  public Map<NodeId, GraphNode> nodes() {
+  public Map<String, GraphNode> nodes() {
     return Map.copyOf(nodes);
   }
 
@@ -78,7 +78,7 @@ public final class GraphEngine {
     }
   }
 
-  public List<GraphEdge> outgoingCalls(NodeId from) {
+  public List<GraphEdge> outgoingCalls(String from) {
     List<GraphEdge> list = outgoingCallsIndex.get(from);
     if (list == null || list.isEmpty()) {
       return List.of();
@@ -88,7 +88,7 @@ public final class GraphEngine {
     }
   }
 
-  public List<GraphEdge> incomingCalls(NodeId to) {
+  public List<GraphEdge> incomingCalls(String to) {
     List<GraphEdge> list = incomingCallsIndex.get(to);
     if (list == null || list.isEmpty()) {
       return List.of();
@@ -98,7 +98,7 @@ public final class GraphEngine {
     }
   }
 
-  public List<GraphEdge> edgesFrom(NodeId from) {
+  public List<GraphEdge> edgesFrom(String from) {
     List<GraphEdge> list = outgoingEdgesIndex.get(from);
     if (list == null || list.isEmpty()) {
       return List.of();
@@ -110,14 +110,14 @@ public final class GraphEngine {
     }
   }
 
-  public void registerImplementation(String interfaceFqn, NodeId implementingTypeId) {
+  public void registerImplementation(String interfaceFqn, String implementingTypeId) {
     interfaceToImplementors
         .computeIfAbsent(interfaceFqn, k -> ConcurrentHashMap.newKeySet())
         .add(implementingTypeId);
   }
 
-  public List<NodeId> implementationsOf(String interfaceFqn) {
-    Set<NodeId> set = interfaceToImplementors.get(interfaceFqn);
+  public List<String> implementationsOf(String interfaceFqn) {
+    Set<String> set = interfaceToImplementors.get(interfaceFqn);
     if (set == null || set.isEmpty()) {
       return List.of();
     }

@@ -1,10 +1,7 @@
 package com.cre.mcp;
 
-import com.cre.core.bootstrap.CreContext;
-import com.cre.core.bootstrap.ProjectManager;
-import com.cre.tools.FindImplementationsTool;
-import com.cre.tools.GetContextTool;
-import com.cre.tools.TraceFlowTool;
+import com.cre.core.service.ContextOptions;
+import com.cre.core.service.CreService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.modelcontextprotocol.json.jackson3.JacksonMcpJsonMapper;
 import io.modelcontextprotocol.server.McpServer;
@@ -27,8 +24,6 @@ import tools.jackson.databind.json.JsonMapper;
 
 @Configuration
 public class McpConfig {
-
-  private static final ObjectMapper JSON = new ObjectMapper();
 
   @Value("${mcp.transport:sse}")
   private String transportType;
@@ -54,7 +49,7 @@ public class McpConfig {
   }
 
   @Bean
-  public McpSyncServer mcpServer(JacksonMcpJsonMapper mcpJson, HttpServletSseServerTransportProvider sseTransport) {
+  public McpSyncServer mcpServer(JacksonMcpJsonMapper mcpJson, HttpServletSseServerTransportProvider sseTransport, CreService creService) {
     var builder = McpServer.sync(transportType.equalsIgnoreCase("stdio") 
         ? new StdioServerTransportProvider(mcpJson) 
         : sseTransport);
@@ -63,100 +58,103 @@ public class McpConfig {
         .serverInfo("cre-mcp", "0.1.0")
         .jsonMapper(mcpJson)
         .tools(
-            tool(mcpJson, "get_context", "Return a normalized context slice for a graph node",
+            tool(mcpJson, "get_context", "Return a normalized context slice for a symbol",
                 """
-                {"type":"object","properties":{"project_root":{"type":"string"},"node_id":{"type":"string"},"depth":{"type":"integer"}},"required":["project_root","node_id"]}
+                {"type":"object","properties":{"project_root":{"type":"string"},"node_id":{"type":"string"},"depth":{"type":"integer"},"options":{"type":"object"}},"required":["project_root","node_id"]}
                 """,
-                McpConfig::handleGetContext),
-            tool(mcpJson, "expand", "Expand a node id into a bounded merged context slice",
+                (ex, req) -> handleGetContext(ex, req, creService)),
+            tool(mcpJson, "expand", "Expand a symbol into a bounded merged context slice",
                 """
                 {"type":"object","properties":{"project_root":{"type":"string"},"node_id":{"type":"string"}},"required":["project_root","node_id"]}
                 """,
-                McpConfig::handleExpand),
-            tool(mcpJson, "find_implementations", "List implementing type node ids for a Java interface FQN",
+                (ex, req) -> handleExpand(ex, req, creService)),
+            tool(mcpJson, "get_project_structure", "Get the project structure as a tree-like string",
                 """
-                {"type":"object","properties":{"project_root":{"type":"string"},"interface_fqn":{"type":"string"}},"required":["project_root","interface_fqn"]}
+                {"type":"object","properties":{"project_root":{"type":"string"}},"required":["project_root"]}
                 """,
-                McpConfig::handleFindImpl),
-            tool(mcpJson, "trace_flow", "Trace CALLS edges in deterministic order from an entry method node id",
+                (ex, req) -> handleGetProjectStructure(ex, req, creService)),
+            tool(mcpJson, "get_file_structure", "Get the structure of a specific file or class as a skeleton",
                 """
-                {"type":"object","properties":{"project_root":{"type":"string"},"entry_method_node_id":{"type":"string"}},"required":["project_root","entry_method_node_id"]}
+                {"type":"object","properties":{"project_root":{"type":"string"},"symbol":{"type":"string"}},"required":["project_root","symbol"]}
                 """,
-                McpConfig::handleTrace),
+                (ex, req) -> handleGetFileStructure(ex, req, creService)),
             tool(mcpJson, "reset_project", "Force re-indexing of a project root",
                 """
                 {"type":"object","properties":{"project_root":{"type":"string"}},"required":["project_root"]}
                 """,
-                McpConfig::handleReset))
+                (ex, req) -> handleReset(ex, req, creService)))
         .build();
   }
 
-  private static CallToolResult handleGetContext(McpSyncServerExchange ex, CallToolRequest req) {
+  private static CallToolResult handleGetContext(McpSyncServerExchange ex, CallToolRequest req, CreService creService) {
     try {
-      CreContext ctx = getContext(req);
-      GetContextTool tool = new GetContextTool(ctx);
+      Path root = getProjectRoot(req);
       Map<String, Object> a = req.arguments();
-      String nodeId = String.valueOf(a.get("node_id"));
+      String symbol = String.valueOf(a.get("node_id"));
       int depth = 0;
       Object d = a.get("depth");
       if (d instanceof Number n) {
         depth = n.intValue();
       }
-      String payload = tool.execute(nodeId, depth);
+      Map<String, Object> optionsMap = (a.get("options") instanceof Map m) ? (Map<String, Object>) m : Map.of();
+      ContextOptions options = ContextOptions.fromMap(optionsMap);
+      
+      String payload = creService.getContext(root, symbol, depth, options);
       return CallToolResult.builder().addTextContent(payload).build();
     } catch (Exception e) {
-      return CallToolResult.builder().isError(true).addTextContent(e.getMessage()).build();
+      return buildErrorResult(e);
     }
   }
 
-  private static CallToolResult handleExpand(McpSyncServerExchange ex, CallToolRequest req) {
-    try {
-      CreContext ctx = getContext(req);
-      GetContextTool tool = new GetContextTool(ctx);
-      String nodeId = String.valueOf(req.arguments().get("node_id"));
-      String payload = tool.expand(nodeId);
-      return CallToolResult.builder().addTextContent(payload).build();
-    } catch (Exception e) {
-      return CallToolResult.builder().isError(true).addTextContent(e.getMessage()).build();
-    }
-  }
-
-  private static CallToolResult handleFindImpl(McpSyncServerExchange ex, CallToolRequest req) {
-    try {
-      CreContext ctx = getContext(req);
-      FindImplementationsTool tool = new FindImplementationsTool(ctx.graph());
-      String fqn = String.valueOf(req.arguments().get("interface_fqn"));
-      String payload = JSON.writeValueAsString(tool.execute(fqn));
-      return CallToolResult.builder().addTextContent(payload).build();
-    } catch (Exception e) {
-      return CallToolResult.builder().isError(true).addTextContent(e.getMessage()).build();
-    }
-  }
-
-  private static CallToolResult handleTrace(McpSyncServerExchange ex, CallToolRequest req) {
-    try {
-      CreContext ctx = getContext(req);
-      TraceFlowTool tool = new TraceFlowTool(ctx.graph());
-      String id = String.valueOf(req.arguments().get("entry_method_node_id"));
-      String payload = JSON.writeValueAsString(tool.execute(id));
-      return CallToolResult.builder().addTextContent(payload).build();
-    } catch (Exception e) {
-      return CallToolResult.builder().isError(true).addTextContent(e.getMessage()).build();
-    }
-  }
-
-  private static CallToolResult handleReset(McpSyncServerExchange ex, CallToolRequest req) {
+  private static CallToolResult handleExpand(McpSyncServerExchange ex, CallToolRequest req, CreService creService) {
     try {
       Path root = getProjectRoot(req);
-      ProjectManager.getInstance().resetContext(root);
-      return CallToolResult.builder().addTextContent("Project reset: " + root).build();
+      String symbol = String.valueOf(req.arguments().get("node_id"));
+      String payload = creService.expand(root, symbol);
+      return CallToolResult.builder().addTextContent(payload).build();
     } catch (Exception e) {
-      return CallToolResult.builder().isError(true).addTextContent(e.getMessage()).build();
+      return buildErrorResult(e);
     }
   }
 
-  private static CreContext getContext(CallToolRequest req) throws Exception {
-    return ProjectManager.getInstance().getContext(getProjectRoot(req));
+  private static CallToolResult handleGetProjectStructure(McpSyncServerExchange ex, CallToolRequest req, CreService creService) {
+    try {
+      Path root = getProjectRoot(req);
+      String payload = creService.getProjectStructure(root);
+      return CallToolResult.builder().addTextContent(payload).build();
+    } catch (Exception e) {
+      return buildErrorResult(e);
+    }
+  }
+
+  private static CallToolResult handleGetFileStructure(McpSyncServerExchange ex, CallToolRequest req, CreService creService) {
+    try {
+      Path root = getProjectRoot(req);
+      String symbol = String.valueOf(req.arguments().get("symbol"));
+      String payload = creService.getFileStructure(root, symbol);
+      return CallToolResult.builder().addTextContent(payload).build();
+    } catch (Exception e) {
+      return buildErrorResult(e);
+    }
+  }
+
+  private static CallToolResult handleReset(McpSyncServerExchange ex, CallToolRequest req, CreService creService) {
+    try {
+      Path root = getProjectRoot(req);
+      creService.resetProject(root);
+      return CallToolResult.builder().addTextContent("Project reset: " + root).build();
+    } catch (Exception e) {
+      return buildErrorResult(e);
+    }
+  }
+
+  private static CallToolResult buildErrorResult(Exception e) {
+    String type = e.getClass().getSimpleName();
+    String message = e.getMessage();
+    return CallToolResult.builder()
+        .isError(true)
+        .addTextContent("[" + type + "] " + (message != null ? message : "An unexpected error occurred"))
+        .build();
   }
 
   private static Path getProjectRoot(CallToolRequest req) {

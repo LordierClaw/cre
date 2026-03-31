@@ -1,72 +1,68 @@
 package com.cre.mcp;
 
-import com.cre.core.bootstrap.CreContext;
-import com.cre.core.bootstrap.ProjectManager;
-import com.cre.tools.FindImplementationsTool;
-import com.cre.tools.GetContextTool;
-import com.cre.tools.TraceFlowTool;
+import com.cre.core.exception.CreException;
+import com.cre.core.exception.ProjectNotFoundException;
+import com.cre.core.exception.SymbolNotFoundException;
+import com.cre.core.service.ContextOptions;
+import com.cre.core.service.CreService;
 import java.nio.file.Path;
-import java.util.List;
 import java.util.Map;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api")
 public class CreController {
 
-  private final ProjectManager projectManager;
+  private final CreService creService;
 
-  public CreController(ProjectManager projectManager) {
-    this.projectManager = projectManager;
+  public CreController(CreService creService) {
+    this.creService = creService;
   }
 
   @PostMapping("/get_context")
-  public String getContext(@RequestBody Map<String, Object> req) throws Exception {
+  public String getContext(@RequestBody Map<String, Object> req) throws CreException {
     String projectRoot = String.valueOf(req.get("project_root"));
-    String nodeId = String.valueOf(req.get("node_id"));
+    String symbol = String.valueOf(req.get("node_id")); // Kept 'node_id' for backward compatibility in JSON
     int depth = 0;
     if (req.get("depth") instanceof Number n) {
       depth = n.intValue();
     }
+    Map<String, Object> optionsMap = (req.get("options") instanceof Map m) ? (Map<String, Object>) m : Map.of();
+    ContextOptions options = ContextOptions.fromMap(optionsMap);
     
-    CreContext ctx = projectManager.getContext(Path.of(projectRoot));
-    return new GetContextTool(ctx).execute(nodeId, depth);
+    return creService.getContext(Path.of(projectRoot), symbol, depth, options);
   }
 
   @PostMapping("/expand")
-  public String expand(@RequestBody Map<String, Object> req) throws Exception {
+  public String expand(@RequestBody Map<String, Object> req) throws CreException {
     String projectRoot = String.valueOf(req.get("project_root"));
-    String nodeId = String.valueOf(req.get("node_id"));
+    String symbol = String.valueOf(req.get("node_id"));
     
-    CreContext ctx = projectManager.getContext(Path.of(projectRoot));
-    return new GetContextTool(ctx).expand(nodeId);
+    return creService.expand(Path.of(projectRoot), symbol);
   }
 
-  @PostMapping("/find_implementations")
-  public List<String> findImplementations(@RequestBody Map<String, Object> req) throws Exception {
+  @PostMapping("/get_project_structure")
+  public String getProjectStructure(@RequestBody Map<String, Object> req) throws CreException {
     String projectRoot = String.valueOf(req.get("project_root"));
-    String fqn = String.valueOf(req.get("interface_fqn"));
-    
-    CreContext ctx = projectManager.getContext(Path.of(projectRoot));
-    return new FindImplementationsTool(ctx.graph()).execute(fqn);
+    return creService.getProjectStructure(Path.of(projectRoot));
   }
 
-  @PostMapping("/trace_flow")
-  public List<String> traceFlow(@RequestBody Map<String, Object> req) throws Exception {
+  @PostMapping("/get_file_structure")
+  public String getFileStructure(@RequestBody Map<String, Object> req) throws CreException {
     String projectRoot = String.valueOf(req.get("project_root"));
-    String id = String.valueOf(req.get("entry_method_node_id"));
-    
-    CreContext ctx = projectManager.getContext(Path.of(projectRoot));
-    return new TraceFlowTool(ctx.graph()).execute(id);
+    String symbol = String.valueOf(req.get("symbol"));
+    return creService.getFileStructure(Path.of(projectRoot), symbol);
   }
 
   @PostMapping("/reset_project")
   public String resetProject(@RequestBody Map<String, Object> req) {
     String projectRoot = String.valueOf(req.get("project_root"));
-    projectManager.resetContext(Path.of(projectRoot));
+    creService.resetProject(Path.of(projectRoot));
     return "Project reset: " + projectRoot;
   }
 }

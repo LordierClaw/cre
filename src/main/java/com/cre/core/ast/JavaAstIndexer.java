@@ -1,7 +1,6 @@
 package com.cre.core.ast;
 
 import com.cre.core.graph.GraphEngine;
-import com.cre.core.graph.NodeId;
 import com.cre.core.graph.model.EdgeType;
 import com.cre.core.graph.model.GraphEdge;
 import com.cre.core.graph.model.GraphNode;
@@ -39,23 +38,18 @@ public final class JavaAstIndexer {
 
   public void index(Path path) throws IOException {
     String source = Files.readString(path);
-    // Relativize against root if possible
-    Path relative = javaSourceRoot.isAbsolute() && path.isAbsolute() 
-        ? javaSourceRoot.relativize(path) 
-        : path;
-    String origin = NodeId.normalizeOrigin(relative);
     CompilationUnit cu = AstUtils.JAVA_PARSER.parse(source).getResult()
         .orElseThrow(() -> new RuntimeException("Failed to parse " + path));
     for (TypeDeclaration<?> td : cu.getTypes()) {
       if (td instanceof ClassOrInterfaceDeclaration cid) {
-        indexType(cid, cu, origin);
+        indexType(cid, cu);
       }
     }
   }
 
-  private void indexType(ClassOrInterfaceDeclaration decl, CompilationUnit cu, String origin) {
+  private void indexType(ClassOrInterfaceDeclaration decl, CompilationUnit cu) {
     String fqName = resolveTypeFqName(decl, cu);
-    NodeId typeId = new NodeId(fqName, "<type>", origin);
+    String typeId = fqName;
     graph.addNode(
         new GraphNode(
             typeId,
@@ -72,7 +66,7 @@ public final class JavaAstIndexer {
     }
 
     for (MethodDeclaration md : decl.getMethods()) {
-      NodeId methodId = new NodeId(fqName, methodSignature(md), origin);
+      String methodId = fqName + "::" + methodSignature(md);
       graph.addNode(
           new GraphNode(
               methodId,
@@ -80,12 +74,12 @@ public final class JavaAstIndexer {
               md.getNameAsString(),
               md.toString()));
       graph.addEdge(new GraphEdge(methodId, typeId, EdgeType.BELONGS_TO));
-      indexMethodCalls(md, decl, cu, origin, fqName);
+      indexMethodCalls(md, decl, cu, fqName);
     }
 
     for (FieldDeclaration fd : decl.getFields()) {
       for (VariableDeclarator v : fd.getVariables()) {
-        NodeId fieldId = new NodeId(fqName, "field:" + v.getNameAsString(), origin);
+        String fieldId = fqName + "::field:" + v.getNameAsString();
         graph.addNode(
             new GraphNode(
                 fieldId,
@@ -98,7 +92,7 @@ public final class JavaAstIndexer {
 
     for (com.github.javaparser.ast.body.BodyDeclaration<?> member : decl.getMembers()) {
       if (member instanceof ClassOrInterfaceDeclaration nested) {
-        indexType(nested, cu, origin);
+        indexType(nested, cu);
       }
     }
   }
@@ -107,9 +101,8 @@ public final class JavaAstIndexer {
       MethodDeclaration md,
       ClassOrInterfaceDeclaration clazz,
       CompilationUnit cu,
-      String origin,
       String declaringFqName) {
-    NodeId fromId = new NodeId(declaringFqName, methodSignature(md), origin);
+    String fromId = declaringFqName + "::" + methodSignature(md);
     Map<String, String> paramTypes = new HashMap<>();
     for (Parameter p : md.getParameters()) {
       paramTypes.put(p.getNameAsString(), p.getType().asString());
@@ -118,7 +111,7 @@ public final class JavaAstIndexer {
     md.findAll(MethodCallExpr.class)
         .forEach(
             call -> {
-              resolveCallee(call, clazz, cu, paramTypes, origin)
+              resolveCallee(call, clazz, cu, paramTypes)
                   .ifPresent(
                       callee -> graph.addEdge(new GraphEdge(fromId, callee, EdgeType.CALLS)));
             });
@@ -129,7 +122,7 @@ public final class JavaAstIndexer {
               if (fa.getScope() instanceof NameExpr scopeName
                   && "this".equals(scopeName.getNameAsString())) {
                 String fieldName = fa.getNameAsString();
-                NodeId fieldId = new NodeId(declaringFqName, "field:" + fieldName, origin);
+                String fieldId = declaringFqName + "::field:" + fieldName;
                 if (graph.node(fieldId) != null) {
                   graph.addEdge(new GraphEdge(fromId, fieldId, EdgeType.USES_FIELD));
                 }
@@ -143,19 +136,18 @@ public final class JavaAstIndexer {
               if (paramTypes.containsKey(name) || "this".equals(name)) {
                 return;
               }
-              NodeId fieldId = new NodeId(declaringFqName, "field:" + name, origin);
+              String fieldId = declaringFqName + "::field:" + name;
               if (graph.node(fieldId) != null) {
                 graph.addEdge(new GraphEdge(fromId, fieldId, EdgeType.USES_FIELD));
               }
             });
   }
 
-  private Optional<NodeId> resolveCallee(
+  private Optional<String> resolveCallee(
       MethodCallExpr call,
       ClassOrInterfaceDeclaration clazz,
       CompilationUnit cu,
-      Map<String, String> paramTypes,
-      String callerOrigin) {
+      Map<String, String> paramTypes) {
     Optional<String> calleeTypeFqn =
         call.getScope().map(s -> resolveScopeTypeFqn(s, clazz, cu)).orElse(Optional.empty());
 
@@ -172,12 +164,7 @@ public final class JavaAstIndexer {
                 .collect(Collectors.joining(","))
             + ")";
 
-    String calleeOrigin = originForFqn(calleeTypeFqn.get());
-    return Optional.of(new NodeId(calleeTypeFqn.get(), signature, calleeOrigin));
-  }
-
-  private String originForFqn(String typeFqn) {
-    return NodeId.normalizeOrigin(Path.of(typeFqn.replace('.', '/') + ".java"));
+    return Optional.of(calleeTypeFqn.get() + "::" + signature);
   }
 
   private Optional<String> resolveScopeTypeFqn(

@@ -2,7 +2,6 @@ package com.cre.core.plugins;
 
 import com.cre.core.ast.AstUtils;
 import com.cre.core.graph.GraphEngine;
-import com.cre.core.graph.NodeId;
 import com.cre.core.graph.model.EdgeType;
 import com.cre.core.graph.model.GraphEdge;
 import com.cre.core.graph.model.GraphNode;
@@ -40,13 +39,14 @@ public final class SpringSemanticsPlugin implements GraphPlugin {
 
   @Override
   public void enrich(GraphEngine graph, Path javaSourceRoot, List<Path> javaFiles) {
-    Map<String, NodeId> typeIds = new HashMap<>();
-    Map<String, List<NodeId>> methodIdsByFqn = new HashMap<>();
+    Map<String, String> typeIds = new HashMap<>();
+    Map<String, List<String>> methodIdsByFqn = new HashMap<>();
     for (GraphNode n : graph.nodes().values()) {
       if (n.kind() == NodeKind.TYPE) {
-        typeIds.put(n.id().fullyQualifiedType(), n.id());
+        typeIds.put(n.id(), n.id()); // NodeId for type is just FQN
       } else if (n.kind() == NodeKind.METHOD) {
-        methodIdsByFqn.computeIfAbsent(n.id().fullyQualifiedType(), __ -> new java.util.ArrayList<>())
+        String fqn = n.id().contains("::") ? n.id().split("::")[0] : n.id();
+        methodIdsByFqn.computeIfAbsent(fqn, __ -> new java.util.ArrayList<>())
             .add(n.id());
       }
     }
@@ -82,12 +82,12 @@ public final class SpringSemanticsPlugin implements GraphPlugin {
 
     // If any service implementation is annotated, treat its interface(s) as service-layer too.
     for (String maybeIface : typeIds.keySet()) {
-      List<NodeId> impls = graph.implementationsOf(maybeIface);
+      List<String> impls = graph.implementationsOf(maybeIface);
       if (impls.isEmpty()) {
         continue;
       }
       boolean anyServiceImpl =
-          impls.stream().anyMatch(id -> serviceLayerTypes.contains(id.fullyQualifiedType()));
+          impls.stream().anyMatch(serviceLayerTypes::contains);
       if (anyServiceImpl) {
         serviceLayerTypes.add(maybeIface);
       }
@@ -95,21 +95,21 @@ public final class SpringSemanticsPlugin implements GraphPlugin {
 
     // Emit ENTRY_POINT and SERVICE_LAYER edges.
     for (String controllerFqn : controllerTypes) {
-      NodeId typeId = typeIds.get(controllerFqn);
+      String typeId = typeIds.get(controllerFqn);
       if (typeId == null) {
         continue;
       }
-      for (NodeId m : methodIdsByFqn.getOrDefault(controllerFqn, List.of())) {
+      for (String m : methodIdsByFqn.getOrDefault(controllerFqn, List.of())) {
         graph.addEdge(new GraphEdge(typeId, m, EdgeType.ENTRY_POINT));
       }
     }
 
     for (String serviceFqn : serviceLayerTypes) {
-      NodeId typeId = typeIds.get(serviceFqn);
+      String typeId = typeIds.get(serviceFqn);
       if (typeId == null) {
         continue;
       }
-      for (NodeId m : methodIdsByFqn.getOrDefault(serviceFqn, List.of())) {
+      for (String m : methodIdsByFqn.getOrDefault(serviceFqn, List.of())) {
         graph.addEdge(new GraphEdge(typeId, m, EdgeType.SERVICE_LAYER));
       }
     }
@@ -121,7 +121,7 @@ public final class SpringSemanticsPlugin implements GraphPlugin {
     for (String controllerFqn : controllerTypes) {
       ClassOrInterfaceDeclaration decl = declsByTypeFqn.get(controllerFqn);
       CompilationUnit cu = cusByTypeFqn.get(controllerFqn);
-      NodeId controllerTypeId = typeIds.get(controllerFqn);
+      String controllerTypeId = typeIds.get(controllerFqn);
       if (decl == null || cu == null || controllerTypeId == null) {
         continue;
       }
@@ -143,7 +143,7 @@ public final class SpringSemanticsPlugin implements GraphPlugin {
             missingBoundary = "wiring_target_type_not_resolved";
             continue;
           }
-          NodeId injectedTypeId = typeIds.get(injectedFqn);
+          String injectedTypeId = typeIds.get(injectedFqn);
           if (injectedTypeId == null) {
             complete = false;
             missingBoundary = "wiring_target_type_node_missing";

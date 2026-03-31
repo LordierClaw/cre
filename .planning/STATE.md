@@ -1,37 +1,37 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.1
-milestone_name: Efficiency & Developer Experience
-status: Ready to plan
-stopped_at: Completed v1.0 milestone
-last_updated: "2026-03-29T10:30:00.000Z"
+milestone: v2.0
+milestone_name: Redesign & Efficiency
+status: Complete
+stopped_at: Finalized v2.0 milestone
+last_updated: "2026-03-31T17:15:00.000Z"
 progress:
-  total_phases: 13
-  completed_phases: 11
-  total_plans: 13
-  completed_plans: 13
+  total_phases: 16
+  completed_phases: 16
+  total_plans: 16
+  completed_plans: 16
 ---
 
 # Project State
 
 ## Project reference
 
-See: `.planning/PROJECT.md` (updated 2026-03-29)
+See: `.planning/PROJECT.md` (updated 2026-03-31)
 
-**Core value:** Enable accurate code changes with drastically fewer tokens by progressively reconstructing execution-relevant context and expanding on-demand only when the missing context is truly required.
+**Core value:** Enable accurate code changes with drastically fewer tokens by progressively reconstructing the exact execution-relevant context and expanding on-demand only when the missing context is truly required.
 
-**Current focus:** Planning for v1.1 - Efficiency & Developer Experience.
+**Current focus:** Completed v2.0.
 
 ## Current position
 
-Phase: 12
-Plan: Ready to plan
+Phase: 16
+Plan: Complete
 
 ## Performance metrics
 
 **Velocity:**
 
-- Total plans completed: 13
+- Total plans completed: 16
 - Average duration: —
 - Total execution time: —
 
@@ -39,18 +39,10 @@ Plan: Ready to plan
 
 | Phase | Plans | Total | Avg/plan |
 |-------|-------|-------|----------|
-| 1 | 1 | 1 | — |
-| 2 | 1 | 1 | — |
-| 3 | 1 | 1 | — |
-| 4 | 1 | 1 | — |
-| 5 | 1 | 1 | — |
-| 7 | 1 | 1 | — |
-| 8 | 1 | 1 | — |
-| 9 | 3 | 3 | — |
-| 10 | 2 | 2 | — |
-| 11 | 1 | 1 | — |
+| 1-11 | 11 | 11 | — |
+| 12-16 | 5 | 5 | — |
 
-**Recent trend:** v1.0 milestone completed with all 11 core phases shipped and verified.
+**Recent trend:** v2.0 completed successfully with all E2E tests passing. Redesign finalized.
 
 *Updated after each plan completion*
 
@@ -58,22 +50,24 @@ Plan: Ready to plan
 
 ### Decisions
 
-Logged in `PROJECT.md` Key Decisions. v1.0 highlights:
+Logged in `PROJECT.md` Key Decisions. v2.0 highlights:
 
-- Shifted to raw text + XML output format for maximum token efficiency and agent readability.
-- Implemented multi-project `ProjectManager` with 2-hour TTL cache for 24/7 runtime.
-- Standardized `NodeId` identity on FQN + signature + normalized path for stability.
+- Adopted Spring DI for core engine.
+- Replaced NodeIds with human-readable Symbols.
+- Implemented exploration tools (`get_project_structure`, `get_file_structure`).
+- Optimized context output with granular JSON options and selective comment pruning.
+- Standardized exception hierarchy for better error reporting.
 
 ### Pending todos
 
-- Plan v1.1 requirements and phases.
+- None. Milestone v2.0 is fully shipped.
 
 ### Blockers/concerns
 
-- None. v1.0 is stable and verified E2E.
+- None.
 
 ## Session continuity
 
-Last session: 2026-03-29T10:30:00.000Z
-Stopped at: Completed v1.0 milestone
+Last session: 2026-03-31T17:15:00.000Z
+Stopped at: Finalized v2.0 milestone
 Resume file: None

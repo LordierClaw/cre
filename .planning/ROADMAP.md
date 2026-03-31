@@ -14,18 +14,21 @@ CRE (Context Reconstruction Engine) is an AST-backed graph traversal engine desi
 - Archive: [.planning/milestones/v1.0-MVP.md](milestones/v1.0-MVP.md)
 </details>
 
-## Next Milestone: v1.1 - Efficiency & Developer Experience (PLANNED)
+## Milestone v2.0: Redesign & Efficiency (PLANNED)
 
-## Phase summary
+### Phase summary
 
 | Phase | Name | Status | Target |
 |-------|------|--------|--------|
-| 12 | TBD: Performance & Scale | Ready | — |
-| 13 | TBD: Developer Dashboard | Ready | — |
+| 12 | Core Refactoring | Ready | — |
+| 13 | Exploration Tools | Ready | — |
+| 14 | Optimized Context Output | Ready | — |
+| 15 | Robustness & Exceptions | Ready | — |
+| 16 | Final Verification & UAT | Ready | — |
 
 ## Progress
 
-**Execution order:** 0 → 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9 → 10 → 11.
+**Execution order:** 0 → 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9 → 10 → 11 → 12 → 13 → 14 → 15 → 16.
 
 | Phase | Name | Plans complete | Status | Completed |
 |-------|------|----------------|--------|-----------|
@@ -42,6 +45,11 @@ CRE (Context Reconstruction Engine) is an AST-backed graph traversal engine desi
 | 9 | Output Format Optimization | 1/1 | Complete | 2026-03-28 |
 | 10 | Enhanced XML Context Wrapping | 2/2 | Complete | 2026-03-29 |
 | 11 | Raw Text & XML Output Migration | 1/1 | Complete | 2026-03-29 |
+| 12 | Core Refactoring | 1/1 | Complete | 2026-03-31 |
+| 13 | Exploration Tools | 1/1 | Complete | 2026-03-31 |
+| 14 | Optimized Context Output | 1/1 | Complete | 2026-03-31 |
+| 15 | Robustness & Exceptions | 1/1 | Complete | 2026-03-31 |
+| 16 | Final Verification & UAT | 1/1 | Complete | 2026-03-31 |
 
 ---
 

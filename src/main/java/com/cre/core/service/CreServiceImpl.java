@@ -263,26 +263,16 @@ public class CreServiceImpl implements CreService {
           Set<String> markers = transformWithRelevance(cu, typeFqn, gathered, options);
 
           String code = LexicalPreservingPrinter.print(cu);
-          
-          List<TypeDeclaration> types = cu.findAll(TypeDeclaration.class);
-          types.sort((a, b) -> Integer.compare(LexicalPreservingPrinter.print(b).length(), LexicalPreservingPrinter.print(a).length()));
-          for (TypeDeclaration<?> td : types) {
-              String typeCode = LexicalPreservingPrinter.print(td);
-              String fqn = td.getFullyQualifiedName().orElse(td.getNameAsString());
-              
-              StringBuilder wrapped = new StringBuilder();
-              wrapped.append("<file name=\"").append(fqn).append("\">\n");
-              if (markers.contains("CRE_OM_IMPS")) wrapped.append("<omitted_imports/>\n");
-              wrapped.append(typeCode);
-              wrapped.append("\n</file>");
-              
-              code = code.replace(typeCode, wrapped.toString());
-          }
-
           code = code.replaceAll("int\\s+CRE_OM_PROPS\\s*=\\s*0;", "<omitted_properties/>");
           code = code.replaceAll("int\\s+CRE_OM_FUNCS\\s*=\\s*0;", "<omitted_functions/>");
 
-          sb.append(code).append("\n\n");
+          StringBuilder wrapped = new StringBuilder();
+          wrapped.append("<file name=\"").append(typeFqn).append("\">\n");
+          if (markers.contains("CRE_OM_IMPS")) wrapped.append("<omitted_imports/>\n");
+          wrapped.append(code.trim());
+          wrapped.append("\n</file>");
+
+          sb.append(wrapped.toString()).append("\n\n");
         } catch (IOException e) {
           log.error("Failed to read or parse source file: {}", path, e);
         }

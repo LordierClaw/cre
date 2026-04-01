@@ -338,6 +338,23 @@ public class CreServiceImpl implements CreService {
       }
     }
 
+    // Second pass for Relevance properties: Keep fields that were used by the kept methods/constructors
+    if (options.properties() == ContextOptions.DefinitionLevel.RELEVANCE) {
+        for (TypeDeclaration<?> td : cu.getTypes()) {
+            if (td instanceof ClassOrInterfaceDeclaration cid) {
+                for (BodyDeclaration<?> member : cid.getMembers()) {
+                    if (member instanceof FieldDeclaration fd) {
+                        for (VariableDeclarator v : fd.getVariables()) {
+                            if (usage.getUsedFields().contains(v.getNameAsString())) {
+                                toKeep.add(member);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     for (TypeDeclaration<?> td : cu.getTypes()) {
       if (td instanceof ClassOrInterfaceDeclaration cid) {
         List<BodyDeclaration<?>> members = new ArrayList<>(cid.getMembers());

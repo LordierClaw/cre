@@ -26,7 +26,7 @@ class SymbolResolutionE2ETest {
     String symbol = "com.bookstore.service.BookSearchService";
 
     String resp = creService.getContext(projectRoot, symbol, 0, ContextOptions.defaultOptions());
-    assertThat(resp).contains("<BookSearchService>");
+    assertThat(resp).contains("<file name=\"com.bookstore.service.BookSearchService\">");
   }
 
   @Test
@@ -35,7 +35,7 @@ class SymbolResolutionE2ETest {
     String symbol = "BookSearchService";
 
     String resp = creService.getContext(projectRoot, symbol, 0, ContextOptions.defaultOptions());
-    assertThat(resp).contains("<BookSearchService>");
+    assertThat(resp).contains("<file name=\"com.bookstore.service.BookSearchService\">");
   }
 
   @Test

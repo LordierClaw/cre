@@ -149,7 +149,7 @@ public final class JavaAstIndexer {
       CompilationUnit cu,
       Map<String, String> paramTypes) {
     Optional<String> calleeTypeFqn =
-        call.getScope().map(s -> resolveScopeTypeFqn(s, clazz, cu)).orElse(Optional.empty());
+        call.getScope().map(s -> resolveScopeTypeFqn(s, clazz, cu, paramTypes)).orElse(Optional.empty());
 
     if (calleeTypeFqn.isEmpty()) {
       return Optional.empty();
@@ -160,7 +160,7 @@ public final class JavaAstIndexer {
         methodName
             + "("
             + call.getArguments().stream()
-                .map(a -> inferArgumentType(a, paramTypes))
+                .map(a -> inferArgumentType(a, paramTypes, clazz, cu))
                 .collect(Collectors.joining(","))
             + ")";
 
@@ -168,22 +168,29 @@ public final class JavaAstIndexer {
   }
 
   private Optional<String> resolveScopeTypeFqn(
-      Expression scope, ClassOrInterfaceDeclaration clazz, CompilationUnit cu) {
+      Expression scope, ClassOrInterfaceDeclaration clazz, CompilationUnit cu, Map<String, String> paramTypes) {
     if (scope instanceof NameExpr ne) {
-      return resolveNameExprType(ne.getNameAsString(), clazz, cu);
+      return resolveNameExprType(ne.getNameAsString(), clazz, cu, paramTypes);
+    }
+    if (scope instanceof MethodCallExpr mce) {
+      return mce.getScope().flatMap(s -> resolveScopeTypeFqn(s, clazz, cu, paramTypes));
     }
     if (scope instanceof FieldAccessExpr fa) {
       if (fa.getScope() instanceof NameExpr root
           && "this".equals(root.getNameAsString())) {
         return resolveFieldTypeName(clazz, fa.getNameAsString(), cu);
       }
-      return resolveScopeTypeFqn(fa.getScope(), clazz, cu);
+      return resolveScopeTypeFqn(fa.getScope(), clazz, cu, paramTypes);
     }
     return Optional.empty();
   }
 
   private Optional<String> resolveNameExprType(
-      String name, ClassOrInterfaceDeclaration clazz, CompilationUnit cu) {
+      String name, ClassOrInterfaceDeclaration clazz, CompilationUnit cu, Map<String, String> paramTypes) {
+    if (paramTypes.containsKey(name)) {
+        String typeName = paramTypes.get(name);
+        return resolveSimpleNameToFqn(cu, typeName);
+    }
     return resolveFieldTypeName(clazz, name, cu);
   }
 
@@ -248,13 +255,74 @@ public final class JavaAstIndexer {
     return md.getNameAsString() + "(" + params + ")";
   }
 
-  private static String inferArgumentType(Expression expr, Map<String, String> paramTypes) {
+  private String inferArgumentType(Expression expr, Map<String, String> paramTypes, ClassOrInterfaceDeclaration clazz, CompilationUnit cu) {
     if (expr instanceof StringLiteralExpr) {
       return "String";
     }
     if (expr instanceof NameExpr ne) {
       return paramTypes.getOrDefault(ne.getNameAsString(), "?");
     }
+    if (expr instanceof MethodCallExpr mce) {
+        // Try to resolve the return type of the method call
+        return resolveTypeForExpression(mce, clazz, cu, paramTypes).orElse("?");
+    }
+    if (expr instanceof FieldAccessExpr fae) {
+        return resolveTypeForExpression(fae, clazz, cu, paramTypes).orElse("?");
+    }
     return "?";
+  }
+
+  private Optional<String> resolveTypeForExpression(Expression expr, ClassOrInterfaceDeclaration clazz, CompilationUnit cu, Map<String, String> paramTypes) {
+      if (expr instanceof NameExpr ne) {
+          String name = ne.getNameAsString();
+          return Optional.ofNullable(resolveNameExprType(name, clazz, cu, paramTypes).orElse(null));
+      }
+      if (expr instanceof MethodCallExpr mce) {
+          Optional<String> scopeType = mce.getScope()
+                  .flatMap(s -> resolveScopeTypeFqn(s, clazz, cu, paramTypes));
+          
+          if (scopeType.isPresent()) {
+              String methodName = mce.getNameAsString();
+              String targetFqn = scopeType.get();
+              
+              if (targetFqn.equals(resolveTypeFqName(clazz, cu))) {
+                  for (MethodDeclaration md : clazz.getMethods()) {
+                      if (md.getNameAsString().equals(methodName)) {
+                          return Optional.of(md.getType().asString());
+                      }
+                  }
+              } else {
+                  // Try to find the file for targetFqn
+                  Optional<Path> path = findFilePathForFqn(targetFqn);
+                  if (path.isPresent()) {
+                      try {
+                          String source = Files.readString(path.get());
+                          CompilationUnit otherCu = AstUtils.JAVA_PARSER.parse(source).getResult().orElse(null);
+                          if (otherCu != null) {
+                              for (TypeDeclaration<?> td : otherCu.getTypes()) {
+                                  if (td instanceof ClassOrInterfaceDeclaration otherCid) {
+                                      if (targetFqn.endsWith("." + otherCid.getNameAsString())) {
+                                          for (MethodDeclaration md : otherCid.getMethods()) {
+                                              if (md.getNameAsString().equals(methodName)) {
+                                                  return Optional.of(md.getType().asString());
+                                              }
+                                          }
+                                      }
+                                  }
+                              }
+                          }
+                      } catch (IOException e) {
+                          // Ignore
+                      }
+                  }
+              }
+          }
+      }
+      return Optional.empty();
+  }
+
+  private Optional<Path> findFilePathForFqn(String fqn) {
+    Path p = javaSourceRoot.resolve(fqn.replace('.', '/') + ".java");
+    return Files.exists(p) ? Optional.of(p) : Optional.empty();
   }
 }

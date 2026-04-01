@@ -25,10 +25,12 @@ CRE (Context Reconstruction Engine) is an AST-backed graph traversal engine desi
 | 14 | Optimized Context Output | Ready | — |
 | 15 | Robustness & Exceptions | Ready | — |
 | 16 | Final Verification & UAT | Ready | — |
+| 17.1 | Output Format Migration | Ready | — |
+| 17.2 | Context Depth & Indexer Fixes | Ready | — |
 
 ## Progress
 
-**Execution order:** 0 → 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9 → 10 → 11 → 12 → 13 → 14 → 15 → 16.
+**Execution order:** 0 → 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9 → 10 → 11 → 12 → 13 → 14 → 15 → 16 → 17.1 → 17.2.
 
 | Phase | Name | Plans complete | Status | Completed |
 |-------|------|----------------|--------|-----------|
@@ -50,6 +52,8 @@ CRE (Context Reconstruction Engine) is an AST-backed graph traversal engine desi
 | 14 | Optimized Context Output | 1/1 | Complete | 2026-03-31 |
 | 15 | Robustness & Exceptions | 1/1 | Complete | 2026-03-31 |
 | 16 | Final Verification & UAT | 1/1 | Complete | 2026-03-31 |
+| 17.1 | Output Format Migration | 0/1 | Ready | — |
+| 17.2 | Context Depth & Indexer Fixes | 0/1 | Ready | — |
 
 ---
 

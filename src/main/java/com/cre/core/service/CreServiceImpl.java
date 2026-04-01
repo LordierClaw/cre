@@ -205,7 +205,11 @@ public class CreServiceImpl implements CreService {
 
       if (d < maxDepth && visited.size() < MAX_GATHER_NODES) {
         for (GraphEdge edge : graph.edgesFrom(current)) {
-          if (edge.type() == EdgeType.CATCH_INVOKES) continue;
+          // Strict filtering for context reconstruction traversal
+          if (edge.type() != EdgeType.CALLS && edge.type() != EdgeType.USES_FIELD && edge.type() != EdgeType.IMPLEMENTS) {
+            continue;
+          }
+          
           String to = edge.to();
           if (!visited.contains(to)) {
             visited.add(to);
@@ -244,13 +248,13 @@ public class CreServiceImpl implements CreService {
           types.sort((a, b) -> Integer.compare(LexicalPreservingPrinter.print(b).length(), LexicalPreservingPrinter.print(a).length()));
           for (TypeDeclaration<?> td : types) {
               String typeCode = LexicalPreservingPrinter.print(td);
-              String tagName = td.getNameAsString();
+              String fqn = td.getFullyQualifiedName().orElse(td.getNameAsString());
               
               StringBuilder wrapped = new StringBuilder();
-              wrapped.append("<").append(tagName).append(">\n");
+              wrapped.append("<file name=\"").append(fqn).append("\">\n");
               if (markers.contains("CRE_OM_IMPS")) wrapped.append("<omitted_imports/>\n");
               wrapped.append(typeCode);
-              wrapped.append("\n</").append(tagName).append(">");
+              wrapped.append("\n</file>");
               
               code = code.replace(typeCode, wrapped.toString());
           }
@@ -300,6 +304,14 @@ public class CreServiceImpl implements CreService {
                 toKeep.add(member);
                 usage.inspect(member);
               }
+            } else if (member instanceof FieldDeclaration fd) {
+              for (VariableDeclarator v : fd.getVariables()) {
+                String fieldId = typeFqn + "::field:" + v.getNameAsString();
+                if (retainedNodes.contains(fieldId) || options.properties() == ContextOptions.DefinitionLevel.FULL) {
+                  toKeep.add(member);
+                  usage.inspect(member);
+                }
+              }
             }
           }
         }
@@ -320,13 +332,7 @@ public class CreServiceImpl implements CreService {
               hasPrunedFuncs = true;
             }
           } else if (m instanceof FieldDeclaration fd) {
-            boolean keep = (options.properties() == ContextOptions.DefinitionLevel.FULL);
-            if (!keep && options.properties() == ContextOptions.DefinitionLevel.RELEVANCE) {
-              for (VariableDeclarator v : fd.getVariables()) {
-                if (usage.getUsedFields().contains(v.getNameAsString())) keep = true;
-              }
-            }
-            if (!keep) {
+            if (!toKeep.contains(m)) {
               if (firstPrunedField == null) firstPrunedField = fd;
               else fd.remove();
               hasPrunedProps = true;

@@ -1,6 +1,8 @@
 spring:
   application:
     name: cre
+  main:
+    banner-mode: "off"
 
 mcp:
   transport: sse
@@ -9,3 +11,5 @@ logging:
   level:
     root: INFO
     com.cre: INFO
+  stderr:
+    enabled: true

@@ -37,9 +37,9 @@ class CreServiceTest {
     
     String result = creService.getContext(tempProjectRoot, getUser, 0, ContextOptions.defaultOptions());
 
-    assertThat(result).contains("<UserController>");
+    assertThat(result).contains("<file name=\"com.cre.fixtures.UserController\">");
     assertThat(result).contains("public String getUser(String id)");
-    assertThat(result).contains("</UserController>");
+    assertThat(result).contains("</file>");
     assertThat(result).contains("<omitted_functions/>");
   }
 
@@ -75,8 +75,8 @@ class CreServiceTest {
     
     String result = creService.expand(tempProjectRoot, getUser);
 
-    assertThat(result).contains("<UserController>");
-    assertThat(result).contains("<UserService>");
+    assertThat(result).contains("<file name=\"com.cre.fixtures.UserController\">");
+    assertThat(result).contains("<file name=\"com.cre.fixtures.UserService\">");
   }
 
   @Test

@@ -44,7 +44,7 @@ class RealProjectE2ETest {
 
     // 3. Reconstruct context via CreService
     String resp = creService.getContext(testProjectRoot, searchMethod, 1, com.cre.core.service.ContextOptions.defaultOptions());
-    assertThat(resp).contains("<BookSearchController>");
+    assertThat(resp).contains("<file name=\"com.bookstore.controller.BookSearchController\">");
     assertThat(resp).contains("bookSearchService.searchBooks");
 
     // 4. Verify Caching (same instance)

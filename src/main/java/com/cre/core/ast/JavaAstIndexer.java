@@ -97,6 +97,17 @@ public final class JavaAstIndexer {
               md.getNameAsString(),
               md.toString()));
       graph.addEdge(new GraphEdge(methodId, typeId, EdgeType.BELONGS_TO));
+      
+      // Add DEPENDS_ON edges for return type and parameters
+      resolveTypeReferenceToFqn(md.getType(), cu).ifPresent(target -> {
+          graph.addEdge(new GraphEdge(methodId, target, EdgeType.DEPENDS_ON));
+      });
+      for (Parameter p : md.getParameters()) {
+          resolveTypeReferenceToFqn(p.getType(), cu).ifPresent(target -> {
+              graph.addEdge(new GraphEdge(methodId, target, EdgeType.DEPENDS_ON));
+          });
+      }
+
       indexMethodCalls(md, decl, cu, fqName);
     }
 
@@ -110,6 +121,11 @@ public final class JavaAstIndexer {
                 v.getNameAsString(),
                 v.toString()));
         graph.addEdge(new GraphEdge(fieldId, typeId, EdgeType.BELONGS_TO));
+        
+        // Add DEPENDS_ON edge for field type
+        resolveTypeReferenceToFqn(v.getType(), cu).ifPresent(target -> {
+            graph.addEdge(new GraphEdge(fieldId, target, EdgeType.DEPENDS_ON));
+        });
       }
     }
 
@@ -231,6 +247,19 @@ public final class JavaAstIndexer {
       }
     }
     return Optional.empty();
+  }
+
+  private Optional<String> resolveTypeReferenceToFqn(
+      com.github.javaparser.ast.type.Type type, CompilationUnit cu) {
+    if (type == null) {
+      return Optional.empty();
+    }
+    if (type.isClassOrInterfaceType()) {
+        return resolveTypeReferenceToFqn(type.asClassOrInterfaceType(), cu);
+    }
+    String simple = type.asString();
+    if (simple.contains("<")) simple = simple.substring(0, simple.indexOf('<'));
+    return resolveSimpleNameToFqn(cu, simple);
   }
 
   private Optional<String> resolveTypeReferenceToFqn(

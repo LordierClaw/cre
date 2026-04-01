@@ -213,7 +213,8 @@ public class CreServiceImpl implements CreService {
       if (d < maxDepth && visited.size() < MAX_GATHER_NODES) {
         for (GraphEdge edge : graph.edgesFrom(current)) {
           // Strict filtering for context reconstruction traversal
-          if (edge.type() != EdgeType.CALLS && edge.type() != EdgeType.USES_FIELD && edge.type() != EdgeType.IMPLEMENTS) {
+          if (edge.type() != EdgeType.CALLS && edge.type() != EdgeType.USES_FIELD && 
+              edge.type() != EdgeType.IMPLEMENTS && edge.type() != EdgeType.DEPENDS_ON) {
             continue;
           }
           
@@ -296,9 +297,11 @@ public class CreServiceImpl implements CreService {
     UsageVisitor usage = new UsageVisitor();
 
     Set<BodyDeclaration<?>> toKeep = new HashSet<>();
+    boolean hasAnyMethodGathered = false;
     for (TypeDeclaration<?> td : cu.getTypes()) {
       if (td instanceof ClassOrInterfaceDeclaration cid) {
         String cidFqn = cid.getFullyQualifiedName().orElse(cid.getNameAsString());
+        // Exact match or endsWith for local/nested classes
         if (cidFqn.equals(typeFqn) || typeFqn.endsWith("." + cid.getNameAsString())) {
           for (BodyDeclaration<?> member : cid.getMembers()) {
             if (member instanceof MethodDeclaration md) {
@@ -307,12 +310,14 @@ public class CreServiceImpl implements CreService {
               if (retainedNodes.contains(mid) || options.expandedFunctions().contains(fullSymbol) || options.functions() == ContextOptions.DefinitionLevel.FULL) {
                 toKeep.add(member);
                 usage.inspect(member);
+                hasAnyMethodGathered = true;
               }
             } else if (member instanceof ConstructorDeclaration cd) {
               String cid_id = typeFqn + "::" + constructorSignature(cd);
               if (retainedNodes.contains(cid_id) || options.functions() == ContextOptions.DefinitionLevel.FULL) {
                 toKeep.add(member);
                 usage.inspect(member);
+                hasAnyMethodGathered = true;
               }
             } else if (member instanceof FieldDeclaration fd) {
               for (VariableDeclarator v : fd.getVariables()) {
@@ -326,6 +331,22 @@ public class CreServiceImpl implements CreService {
           }
         }
       }
+    }
+
+    // Default show all properties for "Parameter Relevance Class" (Type node was gathered, but no methods)
+    if (!hasAnyMethodGathered && retainedNodes.contains(typeFqn) && options.properties() == ContextOptions.DefinitionLevel.RELEVANCE) {
+        for (TypeDeclaration<?> td : cu.getTypes()) {
+            if (td instanceof ClassOrInterfaceDeclaration cid) {
+                String cidFqn = cid.getFullyQualifiedName().orElse(cid.getNameAsString());
+                if (cidFqn.equals(typeFqn) || typeFqn.endsWith("." + cid.getNameAsString())) {
+                    for (BodyDeclaration<?> member : cid.getMembers()) {
+                        if (member instanceof FieldDeclaration) {
+                            toKeep.add(member);
+                        }
+                    }
+                }
+            }
+        }
     }
 
     // Second pass for Relevance properties: Keep fields that were used by the kept methods/constructors

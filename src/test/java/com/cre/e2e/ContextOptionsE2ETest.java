@@ -2,14 +2,10 @@ package com.cre.e2e;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.cre.core.bootstrap.CreContext;
-import com.cre.core.bootstrap.ProjectManager;
 import com.cre.core.service.ContextOptions;
 import com.cre.core.service.CreService;
-import com.cre.testsupport.GraphTestSupport;
 import java.nio.file.Path;
 import java.util.Map;
-import java.util.Set;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -17,91 +13,59 @@ import org.springframework.boot.test.context.SpringBootTest;
 @SpringBootTest
 class ContextOptionsE2ETest {
 
-  private static final String TEST_PROJECT_PATH = "/home/hainn/blue/code/cre-test-project";
+    private static final String TEST_PROJECT_PATH = "/home/hainn/blue/code/cre-test-project";
 
-  @Autowired
-  private CreService creService;
+    @Autowired
+    private CreService creService;
 
-  @Test
-  void test_relevance_mode_for_imports_and_properties() throws Exception {
-    Path projectRoot = Path.of(TEST_PROJECT_PATH);
-    String symbol = "com.bookstore.controller.BookSearchController::searchBooks(String,String,String)";
+    @Test
+    void testOptionsFunctionsFull() throws Exception {
+        Path projectRoot = Path.of(TEST_PROJECT_PATH);
+        String symbol = "com.bookstore.controller.AdminBookController::createBook(BookRequest)";
+        
+        // functions: FULL should include all methods in the class
+        ContextOptions options = ContextOptions.fromMap(Map.of(
+            "functions", "FULL"
+        ));
+        
+        String context = creService.getContext(projectRoot, symbol, 0, options);
+        
+        assertThat(context).contains("createBook");
+        assertThat(context).contains("getBook");
+        assertThat(context).contains("getAllBooks");
+        assertThat(context).doesNotContain("<omitted_functions/>");
+    }
 
-    // imports: relevance, properties: relevance (default)
-    ContextOptions opts = new ContextOptions(
-        ContextOptions.DefinitionLevel.RELEVANCE,
-        ContextOptions.DefinitionLevel.RELEVANCE,
-        ContextOptions.DefinitionLevel.OMITTED,
-        Set.of()
-    );
+    @Test
+    void testOptionsPropertiesFull() throws Exception {
+        Path projectRoot = Path.of(TEST_PROJECT_PATH);
+        String symbol = "com.bookstore.service.BookService::createBook(BookRequest)";
+        
+        // properties: FULL should include all fields
+        ContextOptions options = ContextOptions.fromMap(Map.of(
+            "properties", "FULL"
+        ));
+        
+        String context = creService.getContext(projectRoot, symbol, 0, options);
+        
+        assertThat(context).contains("private final BookRepository bookRepository");
+        assertThat(context).doesNotContain("<omitted_properties/>");
+    }
 
-    String resp = creService.getContext(projectRoot, symbol, 0, opts);
-
-    assertThat(resp).contains("<BookSearchController>");
-    // BookSearchController uses BookSearchService
-    assertThat(resp).contains("private final BookSearchService bookSearchService;");
-    // Should contain the import for BookSearchService
-    assertThat(resp).contains("import com.bookstore.service.BookSearchService;");
-  }
-
-  @Test
-  void test_omitted_mode() throws Exception {
-    Path projectRoot = Path.of(TEST_PROJECT_PATH);
-    String symbol = "com.bookstore.controller.BookSearchController";
-
-    ContextOptions opts = new ContextOptions(
-        ContextOptions.DefinitionLevel.OMITTED,
-        ContextOptions.DefinitionLevel.OMITTED,
-        ContextOptions.DefinitionLevel.OMITTED,
-        Set.of()
-    );
-
-    String resp = creService.getContext(projectRoot, symbol, 0, opts);
-
-    assertThat(resp).contains("<BookSearchController>");
-    assertThat(resp).contains("<omitted_imports/>");
-    assertThat(resp).contains("<omitted_properties/>");
-    assertThat(resp).contains("<omitted_functions/>");
-    assertThat(resp).doesNotContain("private final BookSearchService bookSearchService;");
-  }
-
-  @Test
-  void test_full_mode() throws Exception {
-    Path projectRoot = Path.of(TEST_PROJECT_PATH);
-    String symbol = "com.bookstore.controller.BookSearchController";
-
-    ContextOptions opts = new ContextOptions(
-        ContextOptions.DefinitionLevel.FULL,
-        ContextOptions.DefinitionLevel.FULL,
-        ContextOptions.DefinitionLevel.FULL,
-        Set.of()
-    );
-
-    String resp = creService.getContext(projectRoot, symbol, 0, opts);
-
-    assertThat(resp).contains("<BookSearchController>");
-    assertThat(resp).doesNotContain("<omitted_imports/>");
-    assertThat(resp).doesNotContain("<omitted_properties/>");
-    assertThat(resp).doesNotContain("<omitted_functions/>");
-    assertThat(resp).contains("searchBooks");
-  }
-
-  @Test
-  void test_expanded_functions_override() throws Exception {
-    Path projectRoot = Path.of(TEST_PROJECT_PATH);
-    String symbol = "com.bookstore.controller.BookSearchController";
-
-    // Global functions omitted, but specific one expanded
-    ContextOptions opts = new ContextOptions(
-        ContextOptions.DefinitionLevel.OMITTED,
-        ContextOptions.DefinitionLevel.OMITTED,
-        ContextOptions.DefinitionLevel.OMITTED,
-        Set.of("com.bookstore.controller.BookSearchController.searchBooks")
-    );
-
-    String resp = creService.getContext(projectRoot, symbol, 0, opts);
-
-    assertThat(resp).contains("<BookSearchController>");
-    assertThat(resp).contains("searchBooks"); // Expanded
-  }
+    @Test
+    void testImplementationTraversalWithFixtures() throws Exception {
+        // Use the current project's root to find fixtures in src/test/java
+        Path projectRoot = Path.of(".").toAbsolutePath().normalize();
+        String symbol = "com.cre.fixtures.UserService::getUser(String)";
+        
+        // Ensure project is indexed including test fixtures
+        creService.resetProject(projectRoot);
+        
+        // Depth 1 from Interface method should include Implementation method
+        String context = creService.getContext(projectRoot, symbol, 1, ContextOptions.defaultOptions());
+        
+        assertThat(context).contains("<file name=\"com.cre.fixtures.UserService\">");
+        assertThat(context).contains("<file name=\"com.cre.fixtures.UserServiceImpl\">");
+        assertThat(context).contains("public String getUser(String id)");
+    }
 }

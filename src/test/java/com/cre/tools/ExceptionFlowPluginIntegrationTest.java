@@ -21,14 +21,14 @@ class ExceptionFlowPluginIntegrationTest {
             ctx.graph(), "com.cre.fixtures.ExceptionFlowController", "risky(String)");
 
     ProjectManager pm = Mockito.mock(ProjectManager.class);
-    Path root = ctx.javaSourceRoot().getParent();
+    Path root = ctx.projectRoot();
     Mockito.when(pm.getContext(root)).thenReturn(ctx);
     CreServiceImpl creService = new CreServiceImpl(pm, new com.cre.core.service.DefaultContextPostProcessor());
 
     String resp = creService.getContext(root, entry, 1, com.cre.core.service.ContextOptions.defaultOptions());
     
     // In Phase 12, depth 1 should include the classes called by risky()
-    assertThat(resp).contains("<ExceptionFlowController>");
-    assertThat(resp).contains("<UserService>");
+    assertThat(resp).contains("<file name=\"com.cre.fixtures.ExceptionFlowController\">");
+    assertThat(resp).contains("<file name=\"com.cre.fixtures.UserService\">");
   }
 }

@@ -19,27 +19,22 @@ public class CreContext {
   );
 
   private final GraphEngine graph;
-  private final Path javaSourceRoot;
+  private final Path projectRoot;
 
-  public CreContext(GraphEngine graph, Path javaSourceRoot) {
+  public CreContext(GraphEngine graph, Path projectRoot) {
     this.graph = graph;
-    this.javaSourceRoot = javaSourceRoot;
+    this.projectRoot = projectRoot;
   }
 
   public GraphEngine graph() {
     return graph;
   }
 
-  public Path javaSourceRoot() {
-    return javaSourceRoot;
+  public Path projectRoot() {
+    return projectRoot;
   }
 
   public static CreContext fromDirectory(Path projectRoot, boolean pluginsEnabled) throws IOException {
-    Path sourceRoot = projectRoot.resolve("src/main/java");
-    if (!Files.exists(sourceRoot)) {
-      sourceRoot = projectRoot;
-    }
-
     List<Path> javaFiles = new ArrayList<>();
     try (Stream<Path> walk = Files.walk(projectRoot)) {
       walk.filter(p -> p.toString().endsWith(".java"))
@@ -47,7 +42,7 @@ public class CreContext {
           .forEach(javaFiles::add);
     }
 
-    return fromJavaSourceRoot(sourceRoot, pluginsEnabled, javaFiles.toArray(new Path[0]));
+    return fromProjectRoot(projectRoot, pluginsEnabled, javaFiles.toArray(new Path[0]));
   }
 
   private static boolean shouldExclude(Path root, Path p) {
@@ -60,19 +55,21 @@ public class CreContext {
     return false;
   }
 
-  public static CreContext fromJavaSourceRoot(Path javaSourceRoot, Path... javaFiles) throws IOException {
-    return fromJavaSourceRoot(javaSourceRoot, true, javaFiles);
+  public static CreContext fromProjectRoot(Path projectRoot, boolean pluginsEnabled, Path... javaFiles)
+      throws IOException {
+    GraphEngine g = new GraphEngine();
+    JavaAstIndexer indexer = new JavaAstIndexer(g, projectRoot);
+    for (Path p : javaFiles) {
+      indexer.index(p);
+    }
+    PluginRegistry.applyPlugins(g, projectRoot, List.of(javaFiles), pluginsEnabled);
+    return new CreContext(g, projectRoot);
   }
 
   public static CreContext fromJavaSourceRoot(Path javaSourceRoot, boolean pluginsEnabled, Path... javaFiles)
       throws IOException {
-    GraphEngine g = new GraphEngine();
-    JavaAstIndexer indexer = new JavaAstIndexer(g, javaSourceRoot);
-    for (Path p : javaFiles) {
-      indexer.index(p);
-    }
-    PluginRegistry.applyPlugins(g, javaSourceRoot, List.of(javaFiles), pluginsEnabled);
-    return new CreContext(g, javaSourceRoot);
+      // Compatibility delegate
+      return fromProjectRoot(javaSourceRoot, pluginsEnabled, javaFiles);
   }
 
   public static CreContext defaultFixtureContext() throws IOException {
@@ -90,6 +87,6 @@ public class CreContext {
     if (!Arrays.stream(files).allMatch(Files::exists)) {
       throw new IllegalStateException("Fixture sources missing under src/test/java; cwd=" + root);
     }
-    return fromJavaSourceRoot(javaRoot, pluginsEnabled, files);
+    return fromProjectRoot(root, pluginsEnabled, files);
   }
 }

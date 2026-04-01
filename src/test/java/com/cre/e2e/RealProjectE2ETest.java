@@ -32,7 +32,7 @@ class RealProjectE2ETest {
     // 1. Index test project
     CreContext testCtx = projectManager.getContext(testProjectRoot);
     assertThat(testCtx).isNotNull();
-    assertThat(testCtx.javaSourceRoot().toString()).contains("cre-test-project");
+    assertThat(testCtx.projectRoot().toString()).contains("cre-test-project");
 
     // 2. Resolve a known symbol in test project
     String searchMethod = GraphTestSupport.requireMethod(

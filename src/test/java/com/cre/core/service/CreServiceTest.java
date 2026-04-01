@@ -27,7 +27,7 @@ class CreServiceTest {
     creService = new CreServiceImpl(projectManager, new DefaultContextPostProcessor());
     
     CreContext ctx = ExceptionFlowTestSupport.load(true);
-    tempProjectRoot = ctx.javaSourceRoot().getParent();
+    tempProjectRoot = ctx.projectRoot();
     Mockito.when(projectManager.getContext(tempProjectRoot)).thenReturn(ctx);
   }
 

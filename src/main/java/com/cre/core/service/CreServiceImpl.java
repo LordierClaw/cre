@@ -136,7 +136,7 @@ public class CreServiceImpl implements CreService {
         .orElseThrow(() -> new SymbolNotFoundException(symbol));
     
     String fqn = nodeId.contains("::") ? nodeId.split("::")[0] : nodeId;
-    Path filePath = findFilePathForFqn(ctx.javaSourceRoot(), fqn)
+    Path filePath = findFilePathForFqn(projectRoot, fqn)
         .orElseThrow(() -> new CreException("Source file not found for FQN: " + fqn));
     
     try {
@@ -154,9 +154,16 @@ public class CreServiceImpl implements CreService {
     }
   }
 
-  private Optional<Path> findFilePathForFqn(Path sourceRoot, String fqn) {
-    Path p = sourceRoot.resolve(fqn.replace('.', '/') + ".java");
-    return Files.exists(p) ? Optional.of(p) : Optional.empty();
+  private Optional<Path> findFilePathForFqn(Path projectRoot, String fqn) {
+    String rel = fqn.replace('.', '/') + ".java";
+    Path main = projectRoot.resolve("src/main/java").resolve(rel);
+    if (Files.exists(main)) return Optional.of(main);
+    Path test = projectRoot.resolve("src/test/java").resolve(rel);
+    if (Files.exists(test)) return Optional.of(test);
+    
+    // Fallback to project root direct resolution (original logic)
+    Path fallback = projectRoot.resolve(rel);
+    return Files.exists(fallback) ? Optional.of(fallback) : Optional.empty();
   }
 
   private Optional<String> resolveNodeId(GraphEngine graph, String raw) {
@@ -217,13 +224,26 @@ public class CreServiceImpl implements CreService {
             queue.add(to);
           }
         }
+
+        // Implementation traversal for Interfaces/Abstract classes
+        String fqn = current.contains("::") ? current.split("::")[0] : current;
+        String signature = current.contains("::") ? current.split("::")[1] : null;
+        
+        for (String implementor : graph.implementationsOf(fqn)) {
+          String targetId = (signature != null) ? implementor + "::" + signature : implementor;
+          if (!visited.contains(targetId)) {
+            visited.add(targetId);
+            distances.put(targetId, d + 1);
+            queue.add(targetId);
+          }
+        }
       }
     }
     return result;
   }
 
   private String buildIntegratedView(CreContext ctx, List<String> gathered, ContextOptions options) throws IOException {
-    Path javaSourceRoot = ctx.javaSourceRoot();
+    Path projectRoot = ctx.projectRoot();
     Set<String> visitedTypes = new HashSet<>();
     StringBuilder sb = new StringBuilder();
 
@@ -232,7 +252,7 @@ public class CreServiceImpl implements CreService {
       if (visitedTypes.contains(typeFqn)) continue;
       visitedTypes.add(typeFqn);
 
-      findFilePathForFqn(javaSourceRoot, typeFqn).ifPresent(path -> {
+      findFilePathForFqn(projectRoot, typeFqn).ifPresent(path -> {
         try {
           String source = Files.readString(path);
           CompilationUnit cu = AstUtils.JAVA_PARSER.parse(source).getResult()

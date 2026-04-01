@@ -39,10 +39,9 @@ public record ContextOptions(
   public static ContextOptions fromMap(Map<String, Object> map) {
     if (map == null || map.isEmpty()) return defaultOptions();
 
-    Map<String, Object> defs = (Map<String, Object>) map.getOrDefault("definitions", Map.of());
-    DefinitionLevel imp = DefinitionLevel.fromString((String) defs.get("imports"));
-    DefinitionLevel prop = DefinitionLevel.fromString((String) defs.get("properties"));
-    DefinitionLevel func = DefinitionLevel.fromString((String) defs.get("functions"));
+    DefinitionLevel imp = DefinitionLevel.fromString((String) map.get("imports"));
+    DefinitionLevel prop = DefinitionLevel.fromString((String) map.get("properties"));
+    DefinitionLevel func = DefinitionLevel.fromString((String) map.get("functions"));
 
     Object exp = map.get("expanded_functions");
     Set<String> expanded = Set.of();

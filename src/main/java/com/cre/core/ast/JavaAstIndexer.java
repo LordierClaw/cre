@@ -21,7 +21,9 @@ import com.github.javaparser.ast.type.ClassOrInterfaceType;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -29,22 +31,43 @@ import java.util.stream.Collectors;
 public final class JavaAstIndexer {
 
   private final GraphEngine graph;
-  private final Path javaSourceRoot;
+  private final Path projectRoot;
+  private Path currentSourceRoot;
 
-  public JavaAstIndexer(GraphEngine graph, Path javaSourceRoot) {
+  public JavaAstIndexer(GraphEngine graph, Path projectRoot) {
     this.graph = graph;
-    this.javaSourceRoot = javaSourceRoot;
+    this.projectRoot = projectRoot;
   }
 
   public void index(Path path) throws IOException {
     String source = Files.readString(path);
     CompilationUnit cu = AstUtils.JAVA_PARSER.parse(source).getResult()
         .orElseThrow(() -> new RuntimeException("Failed to parse " + path));
+    
+    // Resolve source root for this file based on package
+    this.currentSourceRoot = resolveSourceRoot(path, cu);
+
     for (TypeDeclaration<?> td : cu.getTypes()) {
       if (td instanceof ClassOrInterfaceDeclaration cid) {
         indexType(cid, cu);
       }
     }
+  }
+
+  private Path resolveSourceRoot(Path filePath, CompilationUnit cu) {
+    return cu.getPackageDeclaration()
+        .map(pd -> {
+          String pkg = pd.getNameAsString();
+          Path p = filePath.getParent();
+          String[] parts = pkg.split("\\.");
+          for (int i = parts.length - 1; i >= 0; i--) {
+            if (p != null && p.getFileName().toString().equals(parts[i])) {
+              p = p.getParent();
+            }
+          }
+          return p;
+        })
+        .orElse(filePath.getParent());
   }
 
   private void indexType(ClassOrInterfaceDeclaration decl, CompilationUnit cu) {
@@ -322,7 +345,16 @@ public final class JavaAstIndexer {
   }
 
   private Optional<Path> findFilePathForFqn(String fqn) {
-    Path p = javaSourceRoot.resolve(fqn.replace('.', '/') + ".java");
-    return Files.exists(p) ? Optional.of(p) : Optional.empty();
+    String rel = fqn.replace('.', '/') + ".java";
+    List<Path> candidates = List.of(
+        projectRoot.resolve("src/main/java"),
+        projectRoot.resolve("src/test/java"),
+        currentSourceRoot != null ? currentSourceRoot : projectRoot
+    );
+    for (Path root : candidates) {
+        Path p = root.resolve(rel);
+        if (Files.exists(p)) return Optional.of(p);
+    }
+    return Optional.empty();
   }
 }

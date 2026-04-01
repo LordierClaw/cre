@@ -307,7 +307,15 @@ public class CreServiceImpl implements CreService {
             if (member instanceof MethodDeclaration md) {
               String mid = typeFqn + "::" + methodSignature(md);
               String fullSymbol = typeFqn + "." + md.getNameAsString();
-              if (retainedNodes.contains(mid) || options.expandedFunctions().contains(fullSymbol) || options.functions() == ContextOptions.DefinitionLevel.FULL) {
+              boolean matched = retainedNodes.contains(mid);
+              
+              // Fallback: match by name only if this class is relevant but the specific signature wasn't found
+              // This helps if there were minor resolution issues during indexing
+              if (!matched && retainedNodes.stream().anyMatch(rn -> rn.startsWith(typeFqn + "::" + md.getNameAsString() + "("))) {
+                  matched = true;
+              }
+
+              if (matched || options.expandedFunctions().contains(fullSymbol) || options.functions() == ContextOptions.DefinitionLevel.FULL) {
                 toKeep.add(member);
                 usage.inspect(member);
                 hasAnyMethodGathered = true;

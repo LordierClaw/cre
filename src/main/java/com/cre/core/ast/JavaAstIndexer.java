@@ -146,6 +146,13 @@ public final class JavaAstIndexer {
     for (Parameter p : md.getParameters()) {
       paramTypes.put(p.getNameAsString(), p.getType().asString());
     }
+    
+    // Add local variables to paramTypes for type inference
+    md.findAll(com.github.javaparser.ast.expr.VariableDeclarationExpr.class).forEach(vde -> {
+        vde.getVariables().forEach(v -> {
+            paramTypes.put(v.getNameAsString(), v.getType().asString());
+        });
+    });
 
     md.findAll(MethodCallExpr.class)
         .forEach(
@@ -195,15 +202,35 @@ public final class JavaAstIndexer {
     }
 
     String methodName = call.getNameAsString();
-    String signature =
-        methodName
-            + "("
-            + call.getArguments().stream()
+    List<String> argTypes = call.getArguments().stream()
                 .map(a -> inferArgumentType(a, paramTypes, clazz, cu))
-                .collect(Collectors.joining(","))
-            + ")";
+                .toList();
+    
+    String signature = methodName + "(" + String.join(",", argTypes) + ")";
+    String fullId = calleeTypeFqn.get() + "::" + signature;
+    
+    if (graph.node(fullId) != null) {
+        return Optional.of(fullId);
+    }
+    
+    // Heuristic: If we have '?' in signature, try to find a method by name and parameter count
+    if (signature.contains("?")) {
+        final int argCount = argTypes.size();
+        List<String> candidates = graph.nodes().keySet().stream()
+            .filter(id -> id.startsWith(calleeTypeFqn.get() + "::" + methodName + "("))
+            .filter(id -> {
+                String params = id.substring(id.indexOf('(') + 1, id.lastIndexOf(')'));
+                if (params.isEmpty()) return argCount == 0;
+                return params.split(",").length == argCount;
+            })
+            .toList();
+        
+        if (candidates.size() == 1) {
+            return Optional.of(candidates.get(0));
+        }
+    }
 
-    return Optional.of(calleeTypeFqn.get() + "::" + signature);
+    return Optional.of(fullId);
   }
 
   private Optional<String> resolveScopeTypeFqn(

@@ -1,53 +1,72 @@
-# Setting up CRE MCP for Claude Code
+# Setting up CRE MCP for Claude Code (Standalone Mode)
 
-This guide explains how to integrate the Context Reconstruction Engine (CRE) with Claude Code using the Model Context Protocol (MCP).
+This guide explains how to run the Context Reconstruction Engine (CRE) as an independent server and connect Claude Code via the Model Context Protocol (MCP) using HTTP/SSE.
+
+## Benefits of Standalone Mode
+- **Persistence**: The server keeps the project index in memory, making subsequent requests much faster.
+- **Reliability**: Decouples the server lifecycle from Claude Code's lifecycle.
+- **Observability**: You can see server logs in a separate terminal.
 
 ## Prerequisites
-
 - Claude Code installed (`npm install -g @anthropic-ai/claude-code`)
 - Java 21+ installed
 - Maven installed
-- CRE project built (`mvn clean package`)
 
-## Setup Instructions
+## Step 1: Start the CRE Server
 
-1.  **Locate the CRE JAR**:
-    Ensure you have the CRE JAR file available. By default, it's located at `target/cre-0.1.0-SNAPSHOT.jar`.
+Run the server in a separate terminal window. You can use Maven directly:
 
-2.  **Configure Claude Code**:
-    Add the CRE MCP server to your Claude Code configuration. You can do this by editing your `claude-code.config.json` or by using the `claude mcp add` command if available.
+```bash
+# In the CRE project root
+mvn spring-boot:run
+```
 
-    If adding manually, add the following to your MCP configuration:
+By default, the server starts on `http://localhost:8080`. The MCP endpoints are:
+- SSE: `http://localhost:8080/mcp/sse`
+- Messages: `http://localhost:8080/mcp/messages`
 
-    ```json
-    {
-      "mcpServers": {
-        "cre": {
-          "command": "java",
-          "args": [
-            "-Dmcp.transport=stdio",
-            "-jar",
-            "/absolute/path/to/cre/target/cre-0.1.0-SNAPSHOT.jar"
-          ]
-        }
-      }
+## Step 2: Configure Claude Code
+
+Add the CRE MCP server to your Claude Code configuration. Use the `sse` transport type.
+
+Edit your Claude Code MCP configuration (usually found via `claude mcp add` or in your global config file):
+
+```json
+{
+  "mcpServers": {
+    "cre": {
+      "url": "http://localhost:8080/mcp/sse"
     }
-    ```
+  }
+}
+```
 
-    **Note**: Replace `/absolute/path/to/cre/` with the actual absolute path to your CRE project.
+**Note**: If you are using the `claude` CLI, you can often add it by running:
+`claude mcp add cre http://localhost:8080/mcp/sse`
 
-3.  **Verify Connection**:
-    Restart Claude Code. You should see `cre` listed in the available MCP servers. You can test it by asking Claude to "get project structure for ." or "get context for a class".
+## Step 3: Verify Connection
 
-## Usage in Claude Code
+In your Claude Code session, verify the tools are available:
+1. Type `/tools` (if supported) or just ask Claude: "What tools do you have from the cre server?"
+2. Test it: "get project structure for ."
 
-Once connected, Claude can use the following tools:
+---
 
-- `get_project_structure`: Visualize the project layout.
-- `get_file_structure`: See the skeleton of a specific file or class.
-- `get_context`: Get a deep, reconstructed context slice for a specific symbol.
-- `expand`: Deeper exploration of a specific node.
+## Alternative: Standard Mode (stdio)
 
-## Persistence Note
+If you prefer NOT to run a separate server, you can use the `stdio` mode:
 
-The `project_root` argument is now automatically converted to an absolute path. This ensures that the indexing and context remain stable even if you change directories within Claude Code.
+```json
+{
+  "mcpServers": {
+    "cre": {
+      "command": "java",
+      "args": [
+        "-Dmcp.transport=stdio",
+        "-jar",
+        "/absolute/path/to/cre/target/cre-0.1.0-SNAPSHOT.jar"
+      ]
+    }
+  }
+}
+```

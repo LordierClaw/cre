@@ -1,40 +1,54 @@
-# CRE MCP Agent Skills
+# CRE MCP: Agent Mastery Guide
 
-This document provides guidance on how to use the CRE MCP server effectively to discover source code knowledge.
+This guide provides precise, actionable workflows for using CRE to master any Java codebase.
 
-## Core Principles
+## 🚀 The "First 5 Minutes" Workflow
 
-1.  **Start Broad**: Use `get_project_structure` to see the overall layout. This helps you identify the main packages and layers.
-2.  **Skeletal Discovery**: Use `get_file_structure` to see the methods and properties of a class without getting overwhelmed by method bodies.
-3.  **Context Slicing**: Use `get_context` to get a deep, reconstructed context for a specific class or method. This tool is your primary way to understand dependencies and data flow.
-4.  **Iterative Deepening**: Use `expand` to explore deeper into a specific `node_id`. If `get_context` has omitted certain parts of the graph (represented by placeholders), use `expand` to reveal them.
+When you enter a new project, follow these exact steps:
 
-## Handling Symbols and IDs
+1.  **Map the Terrain**:
+    `get_project_structure(project_root=".")`
+    *Goal: Identify the `controller`, `service`, and `repository` layers.*
 
-- **Full Paths (FQN)**: Always prefer fully qualified names (e.g., `com.cre.core.service.CreServiceImpl`) or method signatures (e.g., `com.cre.core.service.CreServiceImpl::getContext(Path,String,int,ContextOptions)`).
-- **Persistence**: The server now uses absolute paths for all `project_root` arguments. This ensures that your context remains consistent throughout the session.
-- **Node ID Map**: When the server returns an integrated view with XML-like tags (e.g., `<omitted_01/>`), it also provides a `node_id_map`. Always check this map to resolve the short tags back to their original `node_id` for subsequent `expand` calls.
+2.  **Inspect the Entry Point**:
+    `get_file_structure(project_root=".", symbol="com.package.MainController")`
+    *Goal: See all available endpoints and their signatures without the noise of the implementation.*
 
-## Effective Workflows
+3.  **Deep Dive into Logic**:
+    `get_context(project_root=".", node_id="com.package.MainService::importantMethod(...)")`
+    *Goal: Get a reconstructed view of that method AND all the code it calls.*
 
-- **Bug Investigation**: 
-  1. Identify the relevant controller or service.
-  2. Use `get_context` on the entry point.
-  3. Look for `ExceptionFlow` markers or missing dependencies.
-  4. Expand any suspicious branch.
+## 🛠 Tool Cheat Sheet
 
-- **Refactoring**:
-  1. Use `get_context` to see all current usages of a symbol.
-  2. Use `get_file_structure` to see the current contract.
-  3. Identify all downstream effects of your change.
+| Tool | When to use it | Key Output |
+| :--- | :--- | :--- |
+| `get_project_structure` | First time in project | Directory tree + basic file list |
+| `get_file_structure` | Before editing a file | Class/Interface skeleton (methods & fields) |
+| `get_context` | Understanding complex logic | Reconstructed code slice with dependencies |
+| `expand` | When you see `<omitted_XX />` | Fills in the missing code for a specific node |
+| `reset_project` | After major code changes | Clears cache and re-indexes everything |
 
-- **Knowledge Discovery**:
-  1. Ask the server for the `get_project_structure`.
-  2. Explore the main service interface with `get_file_structure`.
-  3. Deep-dive into the implementation with `get_context`.
+## 💡 Advanced Pro-Tips
 
-## Best Practices
+### 1. Handling "Omitted" Code
+If `get_context` returns a result with tags like `<omitted_01 />`, it means the engine pruned that part to save tokens. 
+- Check the `node_id_map` in the response.
+- Find the real ID for `01` (e.g., `com.package.Helper::method`).
+- Run `expand(node_id="com.package.Helper::method")` to see just that piece.
 
-- Always use `.` as the current project root if you are working within the project directory. The server will automatically resolve it to its absolute path.
-- If a symbol is not found, try a simpler version (e.g., just the class name) and let the server's fuzzy matching help you find the right FQN.
-- Use the `depth` parameter in `get_context` judiciously. A depth of 1 or 2 is usually enough for initial understanding. Use `expand` for more targeted depth later.
+### 2. Precise Symbol Resolution
+- **Prefer FQN**: Always use `com.mycompany.service.MyService` instead of just `MyService`.
+- **Method Signatures**: If a class has overloads, use `MyService::methodName(ParamType1,ParamType2)`.
+- **Fuzzy Search**: If you're not sure, try a partial name. CRE will return a list of matches.
+
+### 3. Understanding Data Flow
+Use `get_context` with `depth=1` or `depth=2`. 
+- `depth=0` (default): Only the symbol and its immediate code.
+- `depth=1`: The symbol + its first-level dependencies.
+- `depth=2`: Follows the rabbit hole one step further.
+
+## 🐛 Troubleshooting
+
+- **"Symbol not found"**: Ensure you have built the project (`mvn compile`) and that the `project_root` is correct.
+- **"Connection Refused"**: If using Standalone Mode, ensure your Spring Boot server is actually running in a terminal.
+- **Outdated Context**: If you just refactored code, run `reset_project` to force CRE to see the new changes.

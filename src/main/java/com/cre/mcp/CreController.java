@@ -35,7 +35,7 @@ public class CreController {
     Map<String, Object> optionsMap = (req.get("options") instanceof Map m) ? (Map<String, Object>) m : Map.of();
     ContextOptions options = ContextOptions.fromMap(optionsMap);
     
-    return creService.getContext(Path.of(projectRoot), symbol, depth, options);
+    return creService.getContext(fullPath(projectRoot), symbol, depth, options);
   }
 
   @PostMapping("/expand")
@@ -43,26 +43,30 @@ public class CreController {
     String projectRoot = String.valueOf(req.get("project_root"));
     String symbol = String.valueOf(req.get("node_id"));
     
-    return creService.expand(Path.of(projectRoot), symbol);
+    return creService.expand(fullPath(projectRoot), symbol);
   }
 
   @PostMapping("/get_project_structure")
   public String getProjectStructure(@RequestBody Map<String, Object> req) throws CreException {
     String projectRoot = String.valueOf(req.get("project_root"));
-    return creService.getProjectStructure(Path.of(projectRoot));
+    return creService.getProjectStructure(fullPath(projectRoot));
   }
 
   @PostMapping("/get_file_structure")
   public String getFileStructure(@RequestBody Map<String, Object> req) throws CreException {
     String projectRoot = String.valueOf(req.get("project_root"));
     String symbol = String.valueOf(req.get("symbol"));
-    return creService.getFileStructure(Path.of(projectRoot), symbol);
+    return creService.getFileStructure(fullPath(projectRoot), symbol);
   }
 
   @PostMapping("/reset_project")
   public String resetProject(@RequestBody Map<String, Object> req) {
     String projectRoot = String.valueOf(req.get("project_root"));
-    creService.resetProject(Path.of(projectRoot));
+    creService.resetProject(fullPath(projectRoot));
     return "Project reset: " + projectRoot;
+  }
+
+  private Path fullPath(String root) {
+    return Path.of(root).toAbsolutePath().normalize();
   }
 }

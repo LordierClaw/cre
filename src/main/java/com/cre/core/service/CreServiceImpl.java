@@ -91,11 +91,12 @@ public class CreServiceImpl implements CreService {
   @Override
   public String getProjectStructure(Path projectRoot) throws CreException {
     Objects.requireNonNull(projectRoot, "projectRoot must not be null");
-    projectManager.getContext(projectRoot);
+    Path absRoot = projectRoot.toAbsolutePath().normalize();
+    projectManager.getContext(absRoot);
     StringBuilder sb = new StringBuilder();
-    sb.append("Project Structure: ").append(projectRoot.toAbsolutePath().normalize()).append("\n");
+    sb.append("Project Structure: ").append(absRoot).append("\n");
     try {
-      walkDirectory(projectRoot, "", sb);
+      walkDirectory(absRoot, "", sb);
     } catch (IOException e) {
       throw new CreException("Failed to walk project directory", e);
     }

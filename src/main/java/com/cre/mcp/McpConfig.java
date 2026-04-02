@@ -162,7 +162,11 @@ public class McpConfig {
     if (root == null) {
       throw new IllegalArgumentException("Missing project_root argument");
     }
-    return Path.of(String.valueOf(root));
+    return fullPath(String.valueOf(root));
+  }
+
+  private static Path fullPath(String path) {
+    return Path.of(path).toAbsolutePath().normalize();
   }
 
   private static SyncToolSpecification tool(

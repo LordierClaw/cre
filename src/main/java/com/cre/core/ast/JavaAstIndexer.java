@@ -80,12 +80,21 @@ public final class JavaAstIndexer {
             decl.getNameAsString(),
             decl.toString()));
 
-    if (!decl.isInterface()) {
-      for (ClassOrInterfaceType impl : decl.getImplementedTypes()) {
-        resolveTypeFqNameFromType(impl, cu)
-            .ifPresent(
-                ifaceFqn -> graph.registerImplementation(ifaceFqn, typeId));
-      }
+    for (ClassOrInterfaceType ext : decl.getExtendedTypes()) {
+        resolveTypeReferenceToFqn(ext, cu).ifPresent(target -> {
+            graph.addEdge(new GraphEdge(typeId, target, EdgeType.DEPENDS_ON));
+            addTypeDependencies(typeId, ext, cu);
+        });
+    }
+
+    for (ClassOrInterfaceType impl : decl.getImplementedTypes()) {
+        resolveTypeReferenceToFqn(impl, cu).ifPresent(target -> {
+            graph.addEdge(new GraphEdge(typeId, target, EdgeType.DEPENDS_ON));
+            addTypeDependencies(typeId, impl, cu);
+            if (!decl.isInterface()) {
+                graph.registerImplementation(target, typeId);
+            }
+        });
     }
 
     for (MethodDeclaration md : decl.getMethods()) {
@@ -98,14 +107,10 @@ public final class JavaAstIndexer {
               md.toString()));
       graph.addEdge(new GraphEdge(methodId, typeId, EdgeType.BELONGS_TO));
       
-      // Add DEPENDS_ON edges for return type and parameters
-      resolveTypeReferenceToFqn(md.getType(), cu).ifPresent(target -> {
-          graph.addEdge(new GraphEdge(methodId, target, EdgeType.DEPENDS_ON));
-      });
+      // Add DEPENDS_ON edges for return type and parameters (including generic arguments)
+      addTypeDependencies(methodId, md.getType(), cu);
       for (Parameter p : md.getParameters()) {
-          resolveTypeReferenceToFqn(p.getType(), cu).ifPresent(target -> {
-              graph.addEdge(new GraphEdge(methodId, target, EdgeType.DEPENDS_ON));
-          });
+          addTypeDependencies(methodId, p.getType(), cu);
       }
 
       indexMethodCalls(md, decl, cu, fqName);
@@ -123,9 +128,7 @@ public final class JavaAstIndexer {
         graph.addEdge(new GraphEdge(fieldId, typeId, EdgeType.BELONGS_TO));
         
         // Add DEPENDS_ON edge for field type
-        resolveTypeReferenceToFqn(v.getType(), cu).ifPresent(target -> {
-            graph.addEdge(new GraphEdge(fieldId, target, EdgeType.DEPENDS_ON));
-        });
+        addTypeDependencies(fieldId, v.getType(), cu);
       }
     }
 
@@ -189,6 +192,23 @@ public final class JavaAstIndexer {
             });
   }
 
+  private void addTypeDependencies(String fromId, com.github.javaparser.ast.type.Type type, CompilationUnit cu) {
+    if (type == null) return;
+
+    resolveTypeReferenceToFqn(type, cu).ifPresent(target -> {
+        graph.addEdge(new GraphEdge(fromId, target, EdgeType.DEPENDS_ON));
+    });
+
+    if (type.isClassOrInterfaceType()) {
+        ClassOrInterfaceType ct = type.asClassOrInterfaceType();
+        ct.getTypeArguments().ifPresent(args -> {
+            for (com.github.javaparser.ast.type.Type arg : args) {
+                addTypeDependencies(fromId, arg, cu);
+            }
+        });
+    }
+  }
+
   private Optional<String> resolveCallee(
       MethodCallExpr call,
       ClassOrInterfaceDeclaration clazz,
@@ -213,21 +233,31 @@ public final class JavaAstIndexer {
         return Optional.of(fullId);
     }
     
-    // Heuristic: If we have '?' in signature, try to find a method by name and parameter count
-    if (signature.contains("?")) {
-        final int argCount = argTypes.size();
-        List<String> candidates = graph.nodes().keySet().stream()
-            .filter(id -> id.startsWith(calleeTypeFqn.get() + "::" + methodName + "("))
-            .filter(id -> {
-                String params = id.substring(id.indexOf('(') + 1, id.lastIndexOf(')'));
-                if (params.isEmpty()) return argCount == 0;
-                return params.split(",").length == argCount;
-            })
-            .toList();
-        
-        if (candidates.size() == 1) {
-            return Optional.of(candidates.get(0));
-        }
+    // Heuristic: If we don't find exact match, try matching by replacing generic type parameters with '?' or actual inferred types
+    final int argCount = argTypes.size();
+    List<String> candidates = graph.nodes().keySet().stream()
+        .filter(id -> id.startsWith(calleeTypeFqn.get() + "::" + methodName + "("))
+        .filter(id -> {
+            String params = id.substring(id.indexOf('(') + 1, id.lastIndexOf(')'));
+            if (params.isEmpty()) return argCount == 0;
+            String[] parts = params.split(",");
+            if (parts.length != argCount) return false;
+            
+            for (int i = 0; i < argCount; i++) {
+                String expected = parts[i].trim();
+                String actual = argTypes.get(i);
+                if (expected.equals(actual)) continue;
+                // If expected is a single character (like T, E, K, V), it's likely a generic type parameter
+                if (expected.length() == 1 && Character.isUpperCase(expected.charAt(0))) continue;
+                if (actual.equals("?")) continue;
+                return false;
+            }
+            return true;
+        })
+        .toList();
+    
+    if (!candidates.isEmpty()) {
+        return Optional.of(candidates.get(0));
     }
 
     return Optional.of(fullId);
@@ -304,6 +334,9 @@ public final class JavaAstIndexer {
   }
 
   private Optional<String> resolveSimpleNameToFqn(CompilationUnit cu, String simpleName) {
+    if (isJavaLang(simpleName)) {
+        return Optional.of("java.lang." + simpleName);
+    }
     for (com.github.javaparser.ast.ImportDeclaration im : cu.getImports()) {
       if (im.isStatic() || im.isAsterisk()) {
         continue;
@@ -315,6 +348,12 @@ public final class JavaAstIndexer {
     }
     return cu.getPackageDeclaration()
         .map(pd -> pd.getNameAsString() + "." + simpleName);
+  }
+
+  private boolean isJavaLang(String simpleName) {
+      // Basic list of common java.lang classes. For a real tool, this might be more comprehensive.
+      return List.of("String", "Integer", "Long", "Double", "Boolean", "Object", "Exception", "RuntimeException", "Throwable", "Void")
+              .contains(simpleName);
   }
 
   private String resolveTypeFqName(ClassOrInterfaceDeclaration decl, CompilationUnit cu) {

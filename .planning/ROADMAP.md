@@ -20,17 +20,18 @@ CRE (Context Reconstruction Engine) is an AST-backed graph traversal engine desi
 
 | Phase | Name | Status | Target |
 |-------|------|--------|--------|
-| 12 | Core Refactoring | Ready | — |
-| 13 | Exploration Tools | Ready | — |
-| 14 | Optimized Context Output | Ready | — |
-| 15 | Robustness & Exceptions | Ready | — |
-| 16 | Final Verification & UAT | Ready | — |
-| 17.1 | Output Format Migration | Ready | — |
-| 17.2 | Context Depth & Indexer Fixes | Ready | — |
+| 12 | Core Refactoring | Complete | 2026-03-31 |
+| 13 | Exploration Tools | Complete | 2026-03-31 |
+| 14 | Optimized Context Output | Complete | 2026-03-31 |
+| 15 | Robustness & Exceptions | Complete | 2026-03-31 |
+| 16 | Final Verification & UAT | Complete | 2026-03-31 |
+| 17.1 | Output Format Migration | Complete | 2026-04-14 |
+| 17.2 | Context Depth & Indexer Fixes | Complete | 2026-04-14 |
+| 18 | Java Generic Type Extraction | Complete | 2026-04-14 |
 
 ## Progress
 
-**Execution order:** 0 → 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9 → 10 → 11 → 12 → 13 → 14 → 15 → 16 → 17.1 → 17.2.
+**Execution order:** 0 → 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9 → 10 → 11 → 12 → 13 → 14 → 15 → 16 → 17.1 → 17.2 → 18.
 
 | Phase | Name | Plans complete | Status | Completed |
 |-------|------|----------------|--------|-----------|
@@ -52,9 +53,10 @@ CRE (Context Reconstruction Engine) is an AST-backed graph traversal engine desi
 | 14 | Optimized Context Output | 1/1 | Complete | 2026-03-31 |
 | 15 | Robustness & Exceptions | 1/1 | Complete | 2026-03-31 |
 | 16 | Final Verification & UAT | 1/1 | Complete | 2026-03-31 |
-| 17.1 | Output Format Migration | 0/1 | Ready | — |
-| 17.2 | Context Depth & Indexer Fixes | 0/1 | Ready | — |
+| 17.1 | Output Format Migration | 1/1 | Complete | 2026-04-14 |
+| 17.2 | Context Depth & Indexer Fixes | 1/1 | Complete | 2026-04-14 |
+| 18 | Java Generic Type Extraction | 1/1 | Complete | 2026-04-14 |
 
 ---
 
-*Last updated: 2026-03-29 — Roadmap updated after v1.0 completion.*
+*Last updated: 2026-04-14 — Milestone v2.0 complete.*

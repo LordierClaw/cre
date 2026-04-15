@@ -10,6 +10,7 @@ import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
 import com.github.javaparser.ast.body.FieldDeclaration;
 import com.github.javaparser.ast.body.MethodDeclaration;
 import com.github.javaparser.ast.body.Parameter;
+import com.github.javaparser.ast.body.RecordDeclaration;
 import com.github.javaparser.ast.body.TypeDeclaration;
 import com.github.javaparser.ast.body.VariableDeclarator;
 import com.github.javaparser.ast.expr.Expression;
@@ -18,6 +19,14 @@ import com.github.javaparser.ast.expr.MethodCallExpr;
 import com.github.javaparser.ast.expr.NameExpr;
 import com.github.javaparser.ast.expr.StringLiteralExpr;
 import com.github.javaparser.ast.type.ClassOrInterfaceType;
+import com.github.javaparser.JavaParser;
+import com.github.javaparser.ParserConfiguration;
+import com.github.javaparser.symbolsolver.JavaSymbolSolver;
+import com.github.javaparser.symbolsolver.resolution.typesolvers.CombinedTypeSolver;
+import com.github.javaparser.symbolsolver.resolution.typesolvers.JavaParserTypeSolver;
+import com.github.javaparser.symbolsolver.resolution.typesolvers.ReflectionTypeSolver;
+import com.github.javaparser.resolution.declarations.ResolvedMethodDeclaration;
+import com.github.javaparser.resolution.types.ResolvedType;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -32,16 +41,74 @@ public final class JavaAstIndexer {
 
   private final GraphEngine graph;
   private final Path projectRoot;
+  private final JavaParser parser;
   private Path currentSourceRoot;
 
   public JavaAstIndexer(GraphEngine graph, Path projectRoot) {
     this.graph = graph;
     this.projectRoot = projectRoot;
+    this.parser = createParser(projectRoot);
+  }
+
+  private JavaParser createParser(Path projectRoot) {
+    CombinedTypeSolver typeSolver = new CombinedTypeSolver();
+    typeSolver.add(new ReflectionTypeSolver());
+    
+    // Add source roots if they exist
+    Path srcMain = projectRoot.resolve("src/main/java");
+    if (Files.exists(srcMain)) {
+      typeSolver.add(new JavaParserTypeSolver(srcMain));
+    }
+    Path srcTest = projectRoot.resolve("src/test/java");
+    if (Files.exists(srcTest)) {
+      typeSolver.add(new JavaParserTypeSolver(srcTest));
+    }
+    
+    // Fallback to project root if it looks like a flat project
+    if (!Files.exists(srcMain) && !Files.exists(srcTest)) {
+      typeSolver.add(new JavaParserTypeSolver(projectRoot));
+    }
+
+    ParserConfiguration config = new ParserConfiguration()
+        .setLanguageLevel(ParserConfiguration.LanguageLevel.JAVA_21)
+        .setSymbolResolver(new JavaSymbolSolver(typeSolver));
+    
+    return new JavaParser(config);
+  }
+
+  private String normalizeResolvedType(String typeName) {
+    if (typeName == null) return "?";
+    String normalized = typeName;
+    if (normalized.contains("<")) {
+      normalized = normalized.substring(0, normalized.indexOf("<")).trim();
+    }
+    // Normalize JDK types if they aren't fully qualified by SymbolSolver
+    if (isJavaLang(normalized) && !normalized.contains(".")) {
+      return "java.lang." + normalized;
+    }
+    return normalized;
+  }
+
+  private String toMethodSymbol(ResolvedMethodDeclaration rmd) {
+    String declaringType = rmd.declaringType().getQualifiedName();
+    String methodName = rmd.getName();
+    String params = "";
+    for (int i = 0; i < rmd.getNumberOfParams(); i++) {
+        String pType = rmd.getParam(i).getType().describe();
+        if (pType.contains("<")) {
+            pType = pType.substring(0, pType.indexOf("<")).trim();
+        }
+        if (pType.contains(".")) {
+            pType = pType.substring(pType.lastIndexOf(".") + 1);
+        }
+        params += (params.isEmpty() ? "" : ",") + pType;
+    }
+    return declaringType + "::" + methodName + "(" + params + ")";
   }
 
   public void index(Path path) throws IOException {
     String source = Files.readString(path);
-    CompilationUnit cu = AstUtils.JAVA_PARSER.parse(source).getResult()
+    CompilationUnit cu = parser.parse(source).getResult()
         .orElseThrow(() -> new RuntimeException("Failed to parse " + path));
     
     // Resolve source root for this file based on package
@@ -50,6 +117,8 @@ public final class JavaAstIndexer {
     for (TypeDeclaration<?> td : cu.getTypes()) {
       if (td instanceof ClassOrInterfaceDeclaration cid) {
         indexType(cid, cu);
+      } else if (td instanceof RecordDeclaration rd) {
+        indexRecord(rd, cu);
       }
     }
   }
@@ -68,6 +137,56 @@ public final class JavaAstIndexer {
           return p;
         })
         .orElse(filePath.getParent());
+  }
+
+  private void indexRecord(RecordDeclaration rd, CompilationUnit cu) {
+    String fqName = rd.getFullyQualifiedName().orElse(rd.getNameAsString());
+    String typeId = fqName;
+    graph.addNode(
+        new GraphNode(
+            typeId,
+            NodeKind.TYPE,
+            rd.getNameAsString(),
+            rd.toString()));
+
+    for (ClassOrInterfaceType impl : rd.getImplementedTypes()) {
+        resolveTypeReferenceToFqn(impl, cu).ifPresent(target -> {
+            graph.addEdge(new GraphEdge(typeId, target, EdgeType.DEPENDS_ON));
+            addTypeDependencies(typeId, impl, cu);
+            graph.registerImplementation(target, typeId);
+        });
+    }
+
+    // Index components as fields
+    rd.getParameters().forEach(p -> {
+        String fieldId = fqName + "::field:" + p.getNameAsString();
+        graph.addNode(
+            new GraphNode(
+                fieldId,
+                NodeKind.FIELD,
+                p.getNameAsString(),
+                p.toString()));
+        graph.addEdge(new GraphEdge(fieldId, typeId, EdgeType.BELONGS_TO));
+        addTypeDependencies(fieldId, p.getType(), cu);
+    });
+
+    for (MethodDeclaration md : rd.getMethods()) {
+      String methodId = fqName + "::" + methodSignature(md);
+      graph.addNode(
+          new GraphNode(
+              methodId,
+              NodeKind.METHOD,
+              md.getNameAsString(),
+              md.toString()));
+      graph.addEdge(new GraphEdge(methodId, typeId, EdgeType.BELONGS_TO));
+      
+      addTypeDependencies(methodId, md.getType(), cu);
+      for (Parameter p : md.getParameters()) {
+          addTypeDependencies(methodId, p.getType(), cu);
+      }
+
+      indexMethodCalls(md, rd, cu, fqName);
+    }
   }
 
   private void indexType(ClassOrInterfaceDeclaration decl, CompilationUnit cu) {
@@ -132,16 +251,18 @@ public final class JavaAstIndexer {
       }
     }
 
-    for (com.github.javaparser.ast.body.BodyDeclaration<?> member : decl.getMembers()) {
-      if (member instanceof ClassOrInterfaceDeclaration nested) {
-        indexType(nested, cu);
+    for (var member : decl.getMembers()) {
+      if (member instanceof ClassOrInterfaceDeclaration nestedCid) {
+        indexType(nestedCid, cu);
+      } else if (member instanceof RecordDeclaration nestedRd) {
+        indexRecord(nestedRd, cu);
       }
     }
   }
 
   private void indexMethodCalls(
       MethodDeclaration md,
-      ClassOrInterfaceDeclaration clazz,
+      TypeDeclaration<?> clazz,
       CompilationUnit cu,
       String declaringFqName) {
     String fromId = declaringFqName + "::" + methodSignature(md);
@@ -160,14 +281,29 @@ public final class JavaAstIndexer {
     md.findAll(MethodCallExpr.class)
         .forEach(
             call -> {
-              resolveCallee(call, clazz, cu, paramTypes)
-                  .ifPresent(
-                      callee -> graph.addEdge(new GraphEdge(fromId, callee, EdgeType.CALLS)));
+              try {
+                  ResolvedMethodDeclaration rmd = call.resolve();
+                  graph.addEdge(new GraphEdge(fromId, toMethodSymbol(rmd), EdgeType.CALLS));
+              } catch (Exception e) {
+                  resolveCallee(call, clazz, cu, paramTypes)
+                      .ifPresent(
+                          callee -> graph.addEdge(new GraphEdge(fromId, callee, EdgeType.CALLS)));
+              }
             });
 
     md.findAll(FieldAccessExpr.class)
         .forEach(
             fa -> {
+              try {
+                  var resolved = fa.resolve();
+                  if (resolved.isField()) {
+                      String fieldFqn = resolved.asField().declaringType().getQualifiedName() + "::field:" + resolved.getName();
+                      graph.addEdge(new GraphEdge(fromId, fieldFqn, EdgeType.USES_FIELD));
+                      return;
+                  }
+              } catch (Exception e) {
+                  // Fallback
+              }
               if (fa.getScope() instanceof NameExpr scopeName
                   && "this".equals(scopeName.getNameAsString())) {
                 String fieldName = fa.getNameAsString();
@@ -181,6 +317,16 @@ public final class JavaAstIndexer {
     md.findAll(NameExpr.class)
         .forEach(
             ne -> {
+              try {
+                  var resolved = ne.resolve();
+                  if (resolved.isField()) {
+                      String fieldFqn = resolved.asField().declaringType().getQualifiedName() + "::field:" + resolved.getName();
+                      graph.addEdge(new GraphEdge(fromId, fieldFqn, EdgeType.USES_FIELD));
+                      return;
+                  }
+              } catch (Exception e) {
+                  // Fallback
+              }
               String name = ne.getNameAsString();
               if (paramTypes.containsKey(name) || "this".equals(name)) {
                 return;
@@ -211,9 +357,16 @@ public final class JavaAstIndexer {
 
   private Optional<String> resolveCallee(
       MethodCallExpr call,
-      ClassOrInterfaceDeclaration clazz,
+      TypeDeclaration<?> clazz,
       CompilationUnit cu,
       Map<String, String> paramTypes) {
+    try {
+        ResolvedMethodDeclaration rmd = call.resolve();
+        return Optional.of(toMethodSymbol(rmd));
+    } catch (Exception e) {
+        // Fallback to manual resolution logic (existing)
+    }
+
     Optional<String> calleeTypeFqn =
         call.getScope().map(s -> resolveScopeTypeFqn(s, clazz, cu, paramTypes)).orElse(Optional.empty());
 
@@ -264,7 +417,7 @@ public final class JavaAstIndexer {
   }
 
   private Optional<String> resolveScopeTypeFqn(
-      Expression scope, ClassOrInterfaceDeclaration clazz, CompilationUnit cu, Map<String, String> paramTypes) {
+      Expression scope, TypeDeclaration<?> clazz, CompilationUnit cu, Map<String, String> paramTypes) {
     if (scope instanceof NameExpr ne) {
       return resolveNameExprType(ne.getNameAsString(), clazz, cu, paramTypes);
     }
@@ -282,7 +435,7 @@ public final class JavaAstIndexer {
   }
 
   private Optional<String> resolveNameExprType(
-      String name, ClassOrInterfaceDeclaration clazz, CompilationUnit cu, Map<String, String> paramTypes) {
+      String name, TypeDeclaration<?> clazz, CompilationUnit cu, Map<String, String> paramTypes) {
     if (paramTypes.containsKey(name)) {
         String typeName = paramTypes.get(name);
         return resolveSimpleNameToFqn(cu, typeName);
@@ -291,17 +444,19 @@ public final class JavaAstIndexer {
   }
 
   private Optional<String> resolveFieldTypeName(
-      ClassOrInterfaceDeclaration clazz, String fieldName, CompilationUnit cu) {
-    for (FieldDeclaration fd : clazz.getFields()) {
-      for (VariableDeclarator v : fd.getVariables()) {
-        if (v.getNameAsString().equals(fieldName)) {
-          com.github.javaparser.ast.type.Type t = v.getType();
-          if (t.isClassOrInterfaceType()) {
-            return resolveTypeReferenceToFqn(t.asClassOrInterfaceType(), cu);
+      TypeDeclaration<?> clazz, String fieldName, CompilationUnit cu) {
+    if (clazz instanceof ClassOrInterfaceDeclaration cid) {
+        for (FieldDeclaration fd : cid.getFields()) {
+          for (VariableDeclarator v : fd.getVariables()) {
+            if (v.getNameAsString().equals(fieldName)) {
+              com.github.javaparser.ast.type.Type t = v.getType();
+              if (t.isClassOrInterfaceType()) {
+                return resolveTypeReferenceToFqn(t.asClassOrInterfaceType(), cu);
+              }
+              return resolveSimpleNameToFqn(cu, t.asString());
+            }
           }
-          return resolveSimpleNameToFqn(cu, t.asString());
         }
-      }
     }
     return Optional.empty();
   }
@@ -311,6 +466,18 @@ public final class JavaAstIndexer {
     if (type == null) {
       return Optional.empty();
     }
+    
+    // Try SymbolSolver first
+    try {
+        String resolved = type.resolve().describe();
+        if (resolved.contains("<")) {
+            resolved = resolved.substring(0, resolved.indexOf("<")).trim();
+        }
+        return Optional.of(resolved);
+    } catch (Exception e) {
+        // Fallback to manual resolution
+    }
+
     if (type.isClassOrInterfaceType()) {
         return resolveTypeReferenceToFqn(type.asClassOrInterfaceType(), cu);
     }
@@ -324,6 +491,18 @@ public final class JavaAstIndexer {
     if (type == null) {
       return Optional.empty();
     }
+
+    // Try SymbolSolver first
+    try {
+        String resolved = type.resolve().describe();
+        if (resolved.contains("<")) {
+            resolved = resolved.substring(0, resolved.indexOf("<")).trim();
+        }
+        return Optional.of(resolved);
+    } catch (Exception e) {
+        // Fallback to manual resolution
+    }
+
     String simple = type.getNameAsString();
     return resolveSimpleNameToFqn(cu, simple);
   }
@@ -356,7 +535,7 @@ public final class JavaAstIndexer {
               .contains(simpleName);
   }
 
-  private String resolveTypeFqName(ClassOrInterfaceDeclaration decl, CompilationUnit cu) {
+  private String resolveTypeFqName(TypeDeclaration<?> decl, CompilationUnit cu) {
     Optional<String> direct = decl.getFullyQualifiedName();
     if (direct.isPresent()) {
       return direct.get();
@@ -366,14 +545,30 @@ public final class JavaAstIndexer {
   }
 
   public static String methodSignature(MethodDeclaration md) {
-    String params =
-        md.getParameters().stream()
-            .map(p -> p.getType().asString())
-            .collect(Collectors.joining(","));
-    return md.getNameAsString() + "(" + params + ")";
+    try {
+        var rmd = md.resolve();
+        String params = "";
+        for (int i = 0; i < rmd.getNumberOfParams(); i++) {
+            String pType = rmd.getParam(i).getType().describe();
+            if (pType.contains("<")) {
+                pType = pType.substring(0, pType.indexOf("<")).trim();
+            }
+            if (pType.contains(".")) {
+                pType = pType.substring(pType.lastIndexOf(".") + 1);
+            }
+            params += (params.isEmpty() ? "" : ",") + pType;
+        }
+        return rmd.getName() + "(" + params + ")";
+    } catch (Exception e) {
+        String params =
+            md.getParameters().stream()
+                .map(p -> p.getType().asString())
+                .collect(Collectors.joining(","));
+        return md.getNameAsString() + "(" + params + ")";
+    }
   }
 
-  private String inferArgumentType(Expression expr, Map<String, String> paramTypes, ClassOrInterfaceDeclaration clazz, CompilationUnit cu) {
+  private String inferArgumentType(Expression expr, Map<String, String> paramTypes, TypeDeclaration<?> clazz, CompilationUnit cu) {
     if (expr instanceof StringLiteralExpr) {
       return "String";
     }
@@ -390,7 +585,7 @@ public final class JavaAstIndexer {
     return "?";
   }
 
-  private Optional<String> resolveTypeForExpression(Expression expr, ClassOrInterfaceDeclaration clazz, CompilationUnit cu, Map<String, String> paramTypes) {
+  private Optional<String> resolveTypeForExpression(Expression expr, TypeDeclaration<?> clazz, CompilationUnit cu, Map<String, String> paramTypes) {
       if (expr instanceof NameExpr ne) {
           String name = ne.getNameAsString();
           return Optional.ofNullable(resolveNameExprType(name, clazz, cu, paramTypes).orElse(null));
@@ -402,6 +597,9 @@ public final class JavaAstIndexer {
           if (scopeType.isPresent()) {
               String methodName = mce.getNameAsString();
               String targetFqn = scopeType.get();
+              if (targetFqn.contains("<")) {
+                  targetFqn = targetFqn.substring(0, targetFqn.indexOf("<")).trim();
+              }
               
               if (targetFqn.equals(resolveTypeFqName(clazz, cu))) {
                   for (MethodDeclaration md : clazz.getMethods()) {
@@ -415,7 +613,7 @@ public final class JavaAstIndexer {
                   if (path.isPresent()) {
                       try {
                           String source = Files.readString(path.get());
-                          CompilationUnit otherCu = AstUtils.JAVA_PARSER.parse(source).getResult().orElse(null);
+                          CompilationUnit otherCu = parser.parse(source).getResult().orElse(null);
                           if (otherCu != null) {
                               for (TypeDeclaration<?> td : otherCu.getTypes()) {
                                   if (td instanceof ClassOrInterfaceDeclaration otherCid) {
@@ -439,8 +637,12 @@ public final class JavaAstIndexer {
       return Optional.empty();
   }
 
-  private Optional<Path> findFilePathForFqn(String fqn) {
-    String rel = fqn.replace('.', '/') + ".java";
+  Optional<Path> findFilePathForFqn(String fqn) {
+    String baseFqn = fqn;
+    if (fqn.contains("<")) {
+      baseFqn = fqn.substring(0, fqn.indexOf("<")).trim();
+    }
+    String rel = baseFqn.replace('.', '/') + ".java";
     List<Path> candidates = List.of(
         projectRoot.resolve("src/main/java"),
         projectRoot.resolve("src/test/java"),

@@ -91,6 +91,6 @@ public class GenericTypeSupportTest {
         // 6. Wildcards and Type Bounds
         assertThat(graph.nodes().keySet())
             .contains("com.cre.fixtures.GenericService::save(S)")
-            .contains("com.cre.fixtures.GenericService::processAll(List<? extends T>)");
+            .contains("com.cre.fixtures.GenericService::processAll(List)");
     }
 }

@@ -11,9 +11,21 @@ Enable accurate code changes with drastically fewer tokens by progressively reco
 ## Shipped Versions
 
 - **v1.0 (2026-03-29):** Core MCP server, AST graph, Spring/Exception plugins, Heuristic ranking/pruning, Raw Text/XML Migration, SSE/REST support.
-- **v2.0 (2026-03-31):** Redesign & Efficiency. Spring DI, exploration tools, optimized XML output, symbol-based resolution, robust exception handling.
+- **v2.0 (2026-04-14):** Redesign & Efficiency. Spring DI, exploration tools, optimized XML output, symbol-based resolution, robust exception handling.
+- **v3.0 (2026-04-15):** Symbol Resolution & Accuracy. Integrated JavaParser Symbol Solver, method overloading, generics, inheritance, wildcard imports, modern Java features (records, sealed classes).
 
 ## Requirements
+
+### Validated (v3.0)
+
+- [x] **SYMB-01**: Integrate `JavaParser` Symbol Solver with `CombinedTypeSolver`
+- [x] **SYMB-02**: Support for method overloading resolution
+- [x] **SYMB-03**: Support for inheritance resolution
+- [x] **SYMB-04**: Support for generic type extraction and resolution
+- [x] **SYMB-05**: Support for wildcard imports
+- [x] **SYMB-06**: Refactor `JavaAstIndexer` to use Symbol Solver
+- [x] **SYMB-07**: Handle polymorphism (dynamic dispatch)
+- [x] **SYMB-08**: Support for modern Java features (records, sealed classes)
 
 ### Validated (v2.0)
 
@@ -66,6 +78,14 @@ Enable accurate code changes with drastically fewer tokens by progressively reco
 | Selective Comment Pruning | Keeping only Javadoc saves significant tokens while preserving semantics | ✓ Good |
 </details>
 
+<details>
+<summary><b>v3.0 Decisions</b></summary>
+
+| Decision | Rationale | Outcome |
+|----------|-----------|---------|
+| JavaParser Symbol Solver | Needed for accuracy in method overloading, generics, and inheritance | ✓ Good |
+</details>
+
 ---
 
-*Last updated: 2026-03-29 after v1.0 completion.*
+*Last updated: 2026-04-15 after v3.0 completion.*

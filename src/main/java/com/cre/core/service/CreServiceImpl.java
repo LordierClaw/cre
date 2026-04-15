@@ -155,8 +155,12 @@ public class CreServiceImpl implements CreService {
     }
   }
 
-  private Optional<Path> findFilePathForFqn(Path projectRoot, String fqn) {
-    String rel = fqn.replace('.', '/') + ".java";
+  Optional<Path> findFilePathForFqn(Path projectRoot, String fqn) {
+    String baseFqn = fqn;
+    if (fqn.contains("<")) {
+      baseFqn = fqn.substring(0, fqn.indexOf("<")).trim();
+    }
+    String rel = baseFqn.replace('.', '/') + ".java";
     Path main = projectRoot.resolve("src/main/java").resolve(rel);
     if (Files.exists(main)) return Optional.of(main);
     Path test = projectRoot.resolve("src/test/java").resolve(rel);

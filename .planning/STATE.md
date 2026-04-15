@@ -1,48 +1,41 @@
 ---
 gsd_state_version: 1.0
-milestone: v2.0
-milestone_name: Redesign & Efficiency
+milestone: v3.0
+milestone_name: Symbol Resolution & Accuracy
 status: Completed
-stopped_at: Completed Milestone v2.0
-last_updated: "2026-04-14T10:30:00.000Z"
+stopped_at: Completed Milestone v3.0 - Symbol Resolution & Accuracy
+last_updated: "2026-04-15T13:55:00.000Z"
 progress:
-  total_phases: 19
-  completed_phases: 19
-  total_plans: 19
-  completed_plans: 19
+  total_phases: 24
+  completed_phases: 24
+  total_plans: 24
+  completed_plans: 24
 ---
 
 # Project State
 
 ## Project reference
 
-See: `.planning/PROJECT.md` (updated 2026-04-01)
+See: `.planning/PROJECT.md` (updated 2026-04-15)
 
 **Core value:** Enable accurate code changes with drastically fewer tokens by progressively reconstructing the exact execution-relevant context and expanding on-demand only when the missing context is truly required.
 
-**Current focus:** Milestone v2.0 completed successfully.
+**Current focus:** Milestone v3.0 completed successfully.
 
 ## Current position
 
-Phase: 18
+Phase: 24
 Plan: Completed
 
 ## Performance metrics
 
 **Velocity:**
 
-- Total plans completed: 16
-- Average duration: —
-- Total execution time: —
+- Milestone v2.0 completed successfully.
+- v3.0 initialized with 6 new phases.
+- Phase 19, 20, 21, 22 & 23 completed.
 
-**By phase:**
-
-| Phase | Plans | Total | Avg/plan |
-|-------|-------|-------|----------|
-| 1-11 | 11 | 11 | — |
-| 12-16 | 5 | 5 | — |
-
-**Recent trend:** v2.0 completed successfully with all E2E tests passing. Redesign finalized.
+**Recent trend:** Milestone v3.0 completed. JavaParser Symbol Solver fully integrated, enabling precise resolution of overloading, complex generics, inheritance, and modern Java features.
 
 *Updated after each plan completion*
 
@@ -50,17 +43,17 @@ Plan: Completed
 
 ### Decisions
 
-Logged in `PROJECT.md` Key Decisions. v2.0 highlights:
+Logged in `PROJECT.md` Key Decisions. v3.0 highlights:
 
-- Adopted Spring DI for core engine.
-- Replaced NodeIds with human-readable Symbols.
-- Implemented exploration tools (`get_project_structure`, `get_file_structure`).
-- Optimized context output with granular JSON options and selective comment pruning.
-- Standardized exception hierarchy for better error reporting.
+- Integrated `javaparser-symbol-solver-core` to handle complex Java language features.
+- Refactored `JavaAstIndexer` to prefer SymbolSolver for method/field resolution.
+- Maintained backward compatibility by using simple parameter names in method signatures.
+- Enabled hierarchy-aware resolution for overridden methods and interface calls.
+- Added support for recursive indexing of nested types and Java records.
 
 ### Pending todos
 
-- None. Milestone v2.0 is fully shipped.
+- None. Milestone v3.0 is fully complete.
 
 ### Blockers/concerns
 
@@ -68,6 +61,6 @@ Logged in `PROJECT.md` Key Decisions. v2.0 highlights:
 
 ## Session continuity
 
-Last session: 2026-03-31T17:15:00.000Z
-Stopped at: Finalized v2.0 milestone
+Last session: 2026-04-15T13:55:00.000Z
+Stopped at: Finalized Milestone v3.0
 Resume file: None

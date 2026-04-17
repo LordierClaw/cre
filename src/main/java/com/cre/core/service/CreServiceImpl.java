@@ -291,16 +291,16 @@ public class CreServiceImpl implements CreService {
   private void pruneComments(CompilationUnit cu, Set<String> gatheredIds, String targetNodeId) {
     String targetFqn = targetNodeId.contains("::") ? targetNodeId.split("::")[0] : targetNodeId;
 
-    cu.findAll(TypeDeclaration.class).forEach(td -> {
+    for (TypeDeclaration<?> td : cu.findAll(TypeDeclaration.class)) {
       String typeFqn = td.getFullyQualifiedName().orElse("");
       boolean isGathered = gatheredIds.contains(typeFqn);
       if (td.getJavadocComment().isPresent() && !typeFqn.equals(targetFqn) && !isGathered) {
         td.getJavadocComment().get().remove();
       }
-    });
+    }
 
-    cu.findAll(BodyDeclaration.class).forEach(member -> {
-      if (member instanceof TypeDeclaration) return;
+    for (BodyDeclaration<?> member : cu.findAll(BodyDeclaration.class)) {
+      if (member instanceof TypeDeclaration) continue;
       
       String typeFqn = "";
       com.github.javaparser.ast.Node parentNode = member.getParentNode().orElse(null);
@@ -314,9 +314,9 @@ public class CreServiceImpl implements CreService {
       String nodeId = calculateNodeId(member, typeFqn);
       if (nodeId != null && !gatheredIds.contains(nodeId)) {
         member.getAllContainedComments().forEach(Comment::remove);
-        member.getComment().ifPresent(Comment::remove);
+        member.getComment().ifPresent(c -> c.remove());
       }
-    });
+    }
 
     cu.getOrphanComments().forEach(Comment::remove);
   }

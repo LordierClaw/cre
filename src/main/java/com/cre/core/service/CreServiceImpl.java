@@ -288,12 +288,55 @@ public class CreServiceImpl implements CreService {
   }
 
   private void pruneComments(CompilationUnit cu) {
-    List<Comment> comments = cu.getAllContainedComments();
-    for (Comment comment : comments) {
-      if (!(comment instanceof JavadocComment)) {
-        comment.remove();
+    pruneComments(cu, Set.of(), "");
+  }
+
+  private void pruneComments(CompilationUnit cu, Set<String> gatheredIds, String targetNodeId) {
+    String targetFqn = targetNodeId.contains("::") ? targetNodeId.split("::")[0] : targetNodeId;
+
+    cu.findAll(TypeDeclaration.class).forEach(td -> {
+      String typeFqn = td.getFullyQualifiedName().orElse("");
+      boolean isGathered = gatheredIds.contains(typeFqn);
+      if (td.getJavadocComment().isPresent() && !typeFqn.equals(targetFqn) && !isGathered) {
+        td.getJavadocComment().get().remove();
       }
+    });
+
+    cu.findAll(BodyDeclaration.class).forEach(member -> {
+      if (member instanceof TypeDeclaration) return;
+      
+      String typeFqn = "";
+      com.github.javaparser.ast.Node parentNode = member.getParentNode().orElse(null);
+      while (parentNode != null && !(parentNode instanceof TypeDeclaration)) {
+          parentNode = parentNode.getParentNode().orElse(null);
+      }
+      if (parentNode instanceof TypeDeclaration<?> td) {
+          typeFqn = td.getFullyQualifiedName().orElse("");
+      }
+
+      String nodeId = calculateNodeId(member, typeFqn);
+      if (nodeId != null && !gatheredIds.contains(nodeId)) {
+        member.getAllContainedComments().forEach(Comment::remove);
+        member.getComment().ifPresent(Comment::remove);
+      }
+    });
+
+    cu.getOrphanComments().forEach(Comment::remove);
+  }
+
+  private String calculateNodeId(BodyDeclaration<?> node, String typeFqn) {
+    if (node instanceof MethodDeclaration md) {
+      return typeFqn + "::" + methodSignature(md);
+    } else if (node instanceof ConstructorDeclaration cd) {
+      return typeFqn + "::" + constructorSignature(cd);
+    } else if (node instanceof FieldDeclaration fd) {
+      if (!fd.getVariables().isEmpty()) {
+        return typeFqn + "::field:" + fd.getVariable(0).getNameAsString();
+      }
+    } else if (node instanceof TypeDeclaration<?> td) {
+      return td.getFullyQualifiedName().orElse(typeFqn);
     }
+    return null;
   }
 
   private Set<String> transformWithRelevance(CompilationUnit cu, String typeFqn, List<String> gathered, ContextOptions options) {

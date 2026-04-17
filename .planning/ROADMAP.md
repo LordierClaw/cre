@@ -24,7 +24,7 @@ CRE (Context Reconstruction Engine) is an AST-backed graph traversal engine desi
 - Archive: [.planning/milestones/v2.0-REDESIGN.md](milestones/v2.0-REDESIGN.md)
 </details>
 
-## Milestone v3.0: Symbol Resolution & Accuracy (IN PROGRESS)
+## Milestone v3.0: Symbol Resolution & Accuracy (COMPLETED)
 
 ### Phase summary
 
@@ -36,9 +36,10 @@ CRE (Context Reconstruction Engine) is an AST-backed graph traversal engine desi
 | 22 | Polymorphism & Inheritance | Completed | 2026-04-15 |
 | 23 | Modern Java Features | Completed | 2026-04-15 |
 | 24 | Final Verification & UAT | Completed | 2026-04-15 |
-| 25 | 1/4 | In Progress|  |
+| 25 | Output Optimization & Comment Stripping | Completed | 2026-04-17 |
 
 ## Phases
+
 
 - [x] **Phase 1: Core System** - Initial graph and traversal engine.
 - [x] **Phase 2: Plugin System** - Integration of Spring-specific logic.
@@ -64,7 +65,7 @@ CRE (Context Reconstruction Engine) is an AST-backed graph traversal engine desi
 - [x] **Phase 22: Polymorphism & Inheritance** - Resolve symbols across hierarchy.
 - [x] **Phase 23: Modern Java Features** - Record and sealed class support.
 - [x] **Phase 24: Final Verification & UAT** - Validation on complex code patterns.
-- [ ] **Phase 25: Output Optimization & Comment Stripping** - Optimize token usage and formatting.
+- [x] **Phase 25: Output Optimization & Comment Stripping** - Optimize token usage and formatting.
 
 ## Phase Details
 
@@ -78,8 +79,8 @@ CRE (Context Reconstruction Engine) is an AST-backed graph traversal engine desi
   3. Token count is significantly reduced for large project queries.
 **Plans**:
 - [x] 25-01-PLAN.md — Traversal and Comment Pruning Refactor
-- [ ] 25-02-PLAN.md — Formatting Cleanup & Unit Tests
-- [ ] 25-03-PLAN.md — E2E Verification & Performance
+- [x] 25-02-PLAN.md — Formatting Cleanup & Unit Tests
+- [x] 25-03-PLAN.md — E2E Verification & Performance
 
 ## Progress
 
@@ -93,8 +94,8 @@ CRE (Context Reconstruction Engine) is an AST-backed graph traversal engine desi
 | 22 | Polymorphism & Inheritance | 1/1 | Complete | 2026-04-15 |
 | 23 | Modern Java Features | 1/1 | Complete | 2026-04-15 |
 | 24 | Final Verification & UAT | 1/1 | Complete | 2026-04-15 |
-| 25 | Output Optimization & Comment Stripping | 0/3 | Not started | — |
+| 25 | Output Optimization & Comment Stripping | 3/3 | Complete | 2026-04-17 |
 
 ---
 
-*Last updated: 2026-04-17 — Phase 25 plans added.*
+*Last updated: 2026-04-17 — Phase 25 complete.*

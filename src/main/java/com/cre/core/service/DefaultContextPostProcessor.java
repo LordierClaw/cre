@@ -16,21 +16,22 @@ public class DefaultContextPostProcessor implements ContextPostProcessor {
     String result = context;
 
     // 1. Ensure <omitted_.../> markers are on their own line
-    // Inline before: text <omitted_.../>
-    result = result.replaceAll("([^\\n])\\s*(<omitted_(functions|properties)/>)", "$1\n$2");
-    // Inline after: <omitted_.../> text
-    result = result.replaceAll("(<omitted_(functions|properties)/>)\\s*([^\\n])", "$1\n$3");
+    // If preceded by non-whitespace on the same line, insert newline before it, preserving indentation
+    result = result.replaceAll("(?m)^(\\s*)(?!<omitted_(?:functions|properties)/>)(\\S.*?)[\\s&&[^\\n]]*(<omitted_(?:functions|properties)/>)", "$1$2\n$1$3");
+    // If followed by non-whitespace on the same line, insert newline after it, preserving indentation
+    result = result.replaceAll("(?m)^(\\s*)(<omitted_(?:functions|properties)/>)[\\s&&[^\\n]]*(\\S.*)$", "$1$2\n$1$3");
 
     // 2. Collapse 3+ consecutive newlines (including whitespace-only lines) into exactly 2 newlines (one empty line)
-    // This targets blocks of 2+ empty lines
-    result = result.replaceAll("(\\r?\\n\\s*){3,}", "\n\n");
+    result = result.replaceAll("(\\r?\\n[\\s&&[^\\n]]*){2,}\\r?\\n", "\n\n");
 
     // 3. Trim whitespace inside <file> blocks
-    // Trim after opening tag
-    result = result.replaceAll("(<file[^>]*>)\\s+", "$1\n");
-    // Trim before closing tag
-    result = result.replaceAll("\\s+(</file>)", "\n$1");
+    // Collapse multiple leading newlines after <file> tag into a single newline
+    result = result.replaceAll("(<file[^>]*>)([\\s&&[^\\n]]*\\r?\\n)+", "$1\n");
+    // Collapse multiple trailing newlines before </file> tag into a single newline
+    result = result.replaceAll("(\\r?\\n[\\s&&[^\\n]]*)+(</file>)", "\n$2");
 
-    return result.trim();
+
+    // 4. Final cleanup: strip trailing whitespace but preserve leading whitespace of the first line
+    return result.stripTrailing();
   }
 }

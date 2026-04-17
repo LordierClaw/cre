@@ -47,7 +47,6 @@ import org.springframework.stereotype.Service;
 public class CreServiceImpl implements CreService {
 
   private static final Logger log = LoggerFactory.getLogger(CreServiceImpl.class);
-  private static final int MAX_GATHER_NODES = 100;
 
   private final ProjectManager projectManager;
   private final ContextPostProcessor postProcessor;
@@ -199,6 +198,7 @@ public class CreServiceImpl implements CreService {
   }
 
   private List<String> gatherNodesOrdered(GraphEngine graph, String start, int maxDepth) {
+    int cap = (maxDepth <= 1) ? 150 : (maxDepth <= 3) ? 100 : 50;
     List<String> result = new ArrayList<>();
     Set<String> visited = new HashSet<>();
     Map<String, Integer> distances = new HashMap<>();
@@ -215,7 +215,7 @@ public class CreServiceImpl implements CreService {
       result.add(current);
       int d = distances.get(current);
 
-      if (d < maxDepth && visited.size() < MAX_GATHER_NODES) {
+      if (d < maxDepth && visited.size() < cap) {
         for (GraphEdge edge : graph.edgesFrom(current)) {
           // Strict filtering for context reconstruction traversal
           if (edge.type() != EdgeType.CALLS && edge.type() != EdgeType.USES_FIELD && 

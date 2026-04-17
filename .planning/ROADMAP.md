@@ -24,7 +24,7 @@ CRE (Context Reconstruction Engine) is an AST-backed graph traversal engine desi
 - Archive: [.planning/milestones/v2.0-REDESIGN.md](milestones/v2.0-REDESIGN.md)
 </details>
 
-## Milestone v3.0: Symbol Resolution & Accuracy (COMPLETED)
+## Milestone v3.0: Symbol Resolution & Accuracy (IN PROGRESS)
 
 ### Phase summary
 
@@ -37,9 +37,9 @@ CRE (Context Reconstruction Engine) is an AST-backed graph traversal engine desi
 | 23 | Modern Java Features | Completed | 2026-04-15 |
 | 24 | Final Verification & UAT | Completed | 2026-04-15 |
 | 25 | Output Optimization & Comment Stripping | Completed | 2026-04-17 |
+| 26 | Gap Closure & Integration Fixes | Not started | TBD |
 
 ## Phases
-
 
 - [x] **Phase 1: Core System** - Initial graph and traversal engine.
 - [x] **Phase 2: Plugin System** - Integration of Spring-specific logic.
@@ -66,6 +66,10 @@ CRE (Context Reconstruction Engine) is an AST-backed graph traversal engine desi
 - [x] **Phase 23: Modern Java Features** - Record and sealed class support.
 - [x] **Phase 24: Final Verification & UAT** - Validation on complex code patterns.
 - [x] **Phase 25: Output Optimization & Comment Stripping** - Optimize token usage and formatting.
+- [ ] **Phase 26: Gap Closure & Integration Fixes** - Resolve ID inconsistencies and add Record support.
+    - [ ] 26-01-PLAN.md — Unified Signature Normalization
+    - [ ] 26-02-PLAN.md — Record Support in Service
+    - [ ] 26-03-PLAN.md — Verification & Integration Tests
 
 ## Phase Details
 
@@ -82,6 +86,14 @@ CRE (Context Reconstruction Engine) is an AST-backed graph traversal engine desi
 - [x] 25-02-PLAN.md — Formatting Cleanup & Unit Tests
 - [x] 25-03-PLAN.md — E2E Verification & Performance
 
+### Phase 26: Gap Closure & Integration Fixes
+**Goal**: Resolve signature ID inconsistencies and add Record support to optimization logic.
+**Depends on**: Phase 25
+**Success Criteria** (what must be TRUE):
+  1. `AstUtils` provides a unified signature normalization method used by both Indexer and Service.
+  2. `CreServiceImpl.transformWithRelevance` correctly handles `RecordDeclaration` for comment pruning and body removal.
+  3. E2E tests pass for projects using Records and FQN parameter signatures.
+
 ## Progress
 
 | Phase | Name | Plans complete | Status | Completed |
@@ -95,7 +107,8 @@ CRE (Context Reconstruction Engine) is an AST-backed graph traversal engine desi
 | 23 | Modern Java Features | 1/1 | Complete | 2026-04-15 |
 | 24 | Final Verification & UAT | 1/1 | Complete | 2026-04-15 |
 | 25 | Output Optimization & Comment Stripping | 3/3 | Complete | 2026-04-17 |
+| 26 | Gap Closure & Integration Fixes | 0/3 | Not started | — |
 
 ---
 
-*Last updated: 2026-04-17 — Phase 25 complete.*
+*Last updated: 2026-04-17 — Phase 26 added for gap closure.*

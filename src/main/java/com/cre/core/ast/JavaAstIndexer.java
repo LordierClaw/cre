@@ -76,34 +76,8 @@ public final class JavaAstIndexer {
     return new JavaParser(config);
   }
 
-  private String normalizeResolvedType(String typeName) {
-    if (typeName == null) return "?";
-    String normalized = typeName;
-    if (normalized.contains("<")) {
-      normalized = normalized.substring(0, normalized.indexOf("<")).trim();
-    }
-    // Normalize JDK types if they aren't fully qualified by SymbolSolver
-    if (isJavaLang(normalized) && !normalized.contains(".")) {
-      return "java.lang." + normalized;
-    }
-    return normalized;
-  }
-
   private String toMethodSymbol(ResolvedMethodDeclaration rmd) {
-    String declaringType = rmd.declaringType().getQualifiedName();
-    String methodName = rmd.getName();
-    String params = "";
-    for (int i = 0; i < rmd.getNumberOfParams(); i++) {
-        String pType = rmd.getParam(i).getType().describe();
-        if (pType.contains("<")) {
-            pType = pType.substring(0, pType.indexOf("<")).trim();
-        }
-        if (pType.contains(".")) {
-            pType = pType.substring(pType.lastIndexOf(".") + 1);
-        }
-        params += (params.isEmpty() ? "" : ",") + pType;
-    }
-    return declaringType + "::" + methodName + "(" + params + ")";
+    return AstUtils.getResolvedMethodSignature(rmd);
   }
 
   public void index(Path path) throws IOException {
@@ -546,25 +520,11 @@ public final class JavaAstIndexer {
 
   public static String methodSignature(MethodDeclaration md) {
     try {
-        var rmd = md.resolve();
-        String params = "";
-        for (int i = 0; i < rmd.getNumberOfParams(); i++) {
-            String pType = rmd.getParam(i).getType().describe();
-            if (pType.contains("<")) {
-                pType = pType.substring(0, pType.indexOf("<")).trim();
-            }
-            if (pType.contains(".")) {
-                pType = pType.substring(pType.lastIndexOf(".") + 1);
-            }
-            params += (params.isEmpty() ? "" : ",") + pType;
-        }
-        return rmd.getName() + "(" + params + ")";
+      var rmd = md.resolve();
+      String fullSignature = AstUtils.getResolvedMethodSignature(rmd);
+      return fullSignature.substring(fullSignature.indexOf("::") + 2);
     } catch (Exception e) {
-        String params =
-            md.getParameters().stream()
-                .map(p -> p.getType().asString())
-                .collect(Collectors.joining(","));
-        return md.getNameAsString() + "(" + params + ")";
+      return AstUtils.getMethodSignature(md);
     }
   }
 
@@ -573,14 +533,14 @@ public final class JavaAstIndexer {
       return "String";
     }
     if (expr instanceof NameExpr ne) {
-      return paramTypes.getOrDefault(ne.getNameAsString(), "?");
+      return AstUtils.normalizeType(paramTypes.getOrDefault(ne.getNameAsString(), "?"));
     }
     if (expr instanceof MethodCallExpr mce) {
         // Try to resolve the return type of the method call
-        return resolveTypeForExpression(mce, clazz, cu, paramTypes).orElse("?");
+        return AstUtils.normalizeType(resolveTypeForExpression(mce, clazz, cu, paramTypes).orElse("?"));
     }
     if (expr instanceof FieldAccessExpr fae) {
-        return resolveTypeForExpression(fae, clazz, cu, paramTypes).orElse("?");
+        return AstUtils.normalizeType(resolveTypeForExpression(fae, clazz, cu, paramTypes).orElse("?"));
     }
     return "?";
   }

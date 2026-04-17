@@ -13,9 +13,11 @@ import com.github.javaparser.ast.CompilationUnit;
 import com.github.javaparser.ast.ImportDeclaration;
 import com.github.javaparser.ast.body.BodyDeclaration;
 import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
+import com.github.javaparser.ast.body.CompactConstructorDeclaration;
 import com.github.javaparser.ast.body.ConstructorDeclaration;
 import com.github.javaparser.ast.body.FieldDeclaration;
 import com.github.javaparser.ast.body.MethodDeclaration;
+import com.github.javaparser.ast.body.RecordDeclaration;
 import com.github.javaparser.ast.body.TypeDeclaration;
 import com.github.javaparser.ast.body.VariableDeclarator;
 import com.github.javaparser.ast.comments.Comment;
@@ -318,14 +320,28 @@ public class CreServiceImpl implements CreService {
       }
     }
 
+    // Handle Record components (indexed as fields)
+    for (com.github.javaparser.ast.body.Parameter p : cu.findAll(com.github.javaparser.ast.body.Parameter.class)) {
+      if (p.getParentNode().orElse(null) instanceof RecordDeclaration rd) {
+        String typeFqn = rd.getFullyQualifiedName().orElse("");
+        String nodeId = typeFqn + "::field:" + p.getNameAsString();
+        if (!gatheredIds.contains(nodeId)) {
+          p.getAllContainedComments().forEach(Comment::remove);
+          p.getComment().ifPresent(c -> c.remove());
+        }
+      }
+    }
+
     cu.getOrphanComments().forEach(Comment::remove);
   }
 
   private String calculateNodeId(BodyDeclaration<?> node, String typeFqn) {
     if (node instanceof MethodDeclaration md) {
-      return typeFqn + "::" + methodSignature(md);
+      return typeFqn + "::" + AstUtils.getMethodSignature(md);
     } else if (node instanceof ConstructorDeclaration cd) {
-      return typeFqn + "::" + constructorSignature(cd);
+      return typeFqn + "::" + AstUtils.getConstructorSignature(cd);
+    } else if (node instanceof CompactConstructorDeclaration ccd) {
+      return typeFqn + "::" + AstUtils.getCompactConstructorSignature(ccd);
     } else if (node instanceof FieldDeclaration fd) {
       if (!fd.getVariables().isEmpty()) {
         return typeFqn + "::field:" + fd.getVariable(0).getNameAsString();
@@ -341,62 +357,77 @@ public class CreServiceImpl implements CreService {
     Set<String> markers = new HashSet<>();
     UsageVisitor usage = new UsageVisitor();
 
-    Set<BodyDeclaration<?>> toKeep = new HashSet<>();
+    Set<com.github.javaparser.ast.Node> toKeep = new HashSet<>();
     boolean hasAnyMethodGathered = false;
     for (TypeDeclaration<?> td : cu.getTypes()) {
-      if (td instanceof ClassOrInterfaceDeclaration cid) {
-        String cidFqn = cid.getFullyQualifiedName().orElse(cid.getNameAsString());
-        // Exact match or endsWith for local/nested classes
-        if (cidFqn.equals(typeFqn) || typeFqn.endsWith("." + cid.getNameAsString())) {
-          for (BodyDeclaration<?> member : cid.getMembers()) {
-            if (member instanceof MethodDeclaration md) {
-              String mid = typeFqn + "::" + methodSignature(md);
-              String fullSymbol = typeFqn + "." + md.getNameAsString();
-              boolean matched = retainedNodes.contains(mid);
-              
-              // Fallback: match by name only if this class is relevant but the specific signature wasn't found
-              // This helps if there were minor resolution issues during indexing
-              if (!matched && retainedNodes.stream().anyMatch(rn -> rn.startsWith(typeFqn + "::" + md.getNameAsString() + "("))) {
-                  matched = true;
-              }
+      String tdFqn = td.getFullyQualifiedName().orElse(td.getNameAsString());
+      // Exact match or endsWith for local/nested types
+      if (tdFqn.equals(typeFqn) || typeFqn.endsWith("." + td.getNameAsString())) {
+        for (BodyDeclaration<?> member : td.getMembers()) {
+          if (member instanceof MethodDeclaration md) {
+            String mid = typeFqn + "::" + AstUtils.getMethodSignature(md);
+            String fullSymbol = typeFqn + "." + md.getNameAsString();
+            boolean matched = retainedNodes.contains(mid);
+            
+            // Fallback: match by name only if this class is relevant but the specific signature wasn't found
+            if (!matched && retainedNodes.stream().anyMatch(rn -> rn.startsWith(typeFqn + "::" + md.getNameAsString() + "("))) {
+                matched = true;
+            }
 
-              if (matched || options.expandedFunctions().contains(fullSymbol) || options.functions() == ContextOptions.DefinitionLevel.FULL) {
+            if (matched || options.expandedFunctions().contains(fullSymbol) || options.functions() == ContextOptions.DefinitionLevel.FULL) {
+              toKeep.add(member);
+              usage.inspect(member);
+              hasAnyMethodGathered = true;
+            }
+          } else if (member instanceof ConstructorDeclaration cd) {
+            String cid_id = typeFqn + "::" + AstUtils.getConstructorSignature(cd);
+            if (retainedNodes.contains(cid_id) || options.functions() == ContextOptions.DefinitionLevel.FULL) {
+              toKeep.add(member);
+              usage.inspect(member);
+              hasAnyMethodGathered = true;
+            }
+          } else if (member instanceof CompactConstructorDeclaration ccd) {
+            String ccd_id = typeFqn + "::" + AstUtils.getCompactConstructorSignature(ccd);
+            if (retainedNodes.contains(ccd_id) || options.functions() == ContextOptions.DefinitionLevel.FULL) {
+              toKeep.add(member);
+              usage.inspect(member);
+              hasAnyMethodGathered = true;
+            }
+          } else if (member instanceof FieldDeclaration fd) {
+            for (VariableDeclarator v : fd.getVariables()) {
+              String fieldId = typeFqn + "::field:" + v.getNameAsString();
+              if (retainedNodes.contains(fieldId) || options.properties() == ContextOptions.DefinitionLevel.FULL) {
                 toKeep.add(member);
                 usage.inspect(member);
-                hasAnyMethodGathered = true;
               }
-            } else if (member instanceof ConstructorDeclaration cd) {
-              String cid_id = typeFqn + "::" + constructorSignature(cd);
-              if (retainedNodes.contains(cid_id) || options.functions() == ContextOptions.DefinitionLevel.FULL) {
-                toKeep.add(member);
-                usage.inspect(member);
-                hasAnyMethodGathered = true;
-              }
-            } else if (member instanceof FieldDeclaration fd) {
-              for (VariableDeclarator v : fd.getVariables()) {
-                String fieldId = typeFqn + "::field:" + v.getNameAsString();
-                if (retainedNodes.contains(fieldId) || options.properties() == ContextOptions.DefinitionLevel.FULL) {
-                  toKeep.add(member);
-                  usage.inspect(member);
-                }
-              }
+            }
+          }
+        }
+        
+        if (td instanceof RecordDeclaration rd) {
+          for (com.github.javaparser.ast.body.Parameter p : rd.getParameters()) {
+            String fieldId = typeFqn + "::field:" + p.getNameAsString();
+            if (retainedNodes.contains(fieldId) || options.properties() == ContextOptions.DefinitionLevel.FULL) {
+              toKeep.add(p);
+              usage.inspect(p);
             }
           }
         }
       }
     }
 
-    // Default show all properties for "Parameter Relevance Class" (Type node was gathered, but no methods)
+    // Default show all properties for "Parameter Relevance Class"
     if (!hasAnyMethodGathered && retainedNodes.contains(typeFqn) && options.properties() == ContextOptions.DefinitionLevel.RELEVANCE) {
         for (TypeDeclaration<?> td : cu.getTypes()) {
-            if (td instanceof ClassOrInterfaceDeclaration cid) {
-                String cidFqn = cid.getFullyQualifiedName().orElse(cid.getNameAsString());
-                if (cidFqn.equals(typeFqn) || typeFqn.endsWith("." + cid.getNameAsString())) {
-                    for (BodyDeclaration<?> member : cid.getMembers()) {
-                        if (member instanceof FieldDeclaration) {
-                            toKeep.add(member);
-                        }
+            String tdFqn = td.getFullyQualifiedName().orElse(td.getNameAsString());
+            if (tdFqn.equals(typeFqn) || typeFqn.endsWith("." + td.getNameAsString())) {
+                for (BodyDeclaration<?> member : td.getMembers()) {
+                    if (member instanceof FieldDeclaration) {
+                        toKeep.add(member);
                     }
+                }
+                if (td instanceof RecordDeclaration rd) {
+                    rd.getParameters().forEach(toKeep::add);
                 }
             }
         }
@@ -415,19 +446,25 @@ public class CreServiceImpl implements CreService {
                         }
                     }
                 }
+            } else if (td instanceof RecordDeclaration rd) {
+                for (com.github.javaparser.ast.body.Parameter p : rd.getParameters()) {
+                    if (usage.getUsedFields().contains(p.getNameAsString())) {
+                        toKeep.add(p);
+                    }
+                }
             }
         }
     }
 
     for (TypeDeclaration<?> td : cu.getTypes()) {
-      if (td instanceof ClassOrInterfaceDeclaration cid) {
-        List<BodyDeclaration<?>> members = new ArrayList<>(cid.getMembers());
+      if (td instanceof ClassOrInterfaceDeclaration || td instanceof RecordDeclaration) {
+        List<BodyDeclaration<?>> members = new ArrayList<>(td.getMembers());
         boolean hasPrunedFuncs = false;
         boolean hasPrunedProps = false;
         FieldDeclaration firstPrunedField = null;
 
         for (BodyDeclaration<?> m : members) {
-          if (m instanceof MethodDeclaration || m instanceof ConstructorDeclaration) {
+          if (m instanceof MethodDeclaration || m instanceof ConstructorDeclaration || m instanceof CompactConstructorDeclaration) {
             if (!toKeep.contains(m)) {
               m.remove();
               hasPrunedFuncs = true;
@@ -441,13 +478,23 @@ public class CreServiceImpl implements CreService {
           }
         }
 
+        if (td instanceof RecordDeclaration rd) {
+            List<com.github.javaparser.ast.body.Parameter> parameters = new ArrayList<>(rd.getParameters());
+            for (com.github.javaparser.ast.body.Parameter p : parameters) {
+                if (!toKeep.contains(p)) {
+                    p.remove();
+                    hasPrunedProps = true;
+                }
+            }
+        }
+
         if (hasPrunedProps && options.properties() != ContextOptions.DefinitionLevel.FULL) {
           if (firstPrunedField != null) firstPrunedField.replace(createMarker("CRE_OM_PROPS"));
-          else cid.addMember(createMarker("CRE_OM_PROPS"));
+          else td.addMember(createMarker("CRE_OM_PROPS"));
         }
         
         // Inspect KEPT fields for types
-        for (BodyDeclaration<?> m : cid.getMembers()) {
+        for (BodyDeclaration<?> m : td.getMembers()) {
             if (m instanceof FieldDeclaration fd && !fd.getVariables().isEmpty()) {
                 // If it wasn't replaced by a marker, it's kept
                 if (!fd.getVariable(0).getNameAsString().equals("CRE_OM_PROPS")) {
@@ -457,7 +504,7 @@ public class CreServiceImpl implements CreService {
         }
 
         if (hasPrunedFuncs && options.functions() != ContextOptions.DefinitionLevel.FULL) {
-          cid.addMember(createMarker("CRE_OM_FUNCS"));
+          td.addMember(createMarker("CRE_OM_FUNCS"));
         }
       }
     }
@@ -490,19 +537,5 @@ public class CreServiceImpl implements CreService {
         new com.github.javaparser.ast.type.PrimitiveType(com.github.javaparser.ast.type.PrimitiveType.Primitive.INT),
         name).setInitializer(new com.github.javaparser.ast.expr.IntegerLiteralExpr("0")));
     return marker;
-  }
-
-  private String methodSignature(MethodDeclaration md) {
-    String params = md.getParameters().stream()
-        .map(p -> p.getType().asString())
-        .collect(Collectors.joining(","));
-    return md.getNameAsString() + "(" + params + ")";
-  }
-
-  private String constructorSignature(ConstructorDeclaration cd) {
-    String params = cd.getParameters().stream()
-        .map(p -> p.getType().asString())
-        .collect(Collectors.joining(","));
-    return cd.getNameAsString() + "(" + params + ")";
   }
 }

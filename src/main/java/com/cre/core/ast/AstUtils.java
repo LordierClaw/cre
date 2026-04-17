@@ -3,6 +3,7 @@ package com.cre.core.ast;
 import com.github.javaparser.JavaParser;
 import com.github.javaparser.ParserConfiguration;
 import com.github.javaparser.ParserConfiguration.LanguageLevel;
+import com.github.javaparser.ast.body.CompactConstructorDeclaration;
 import com.github.javaparser.ast.body.ConstructorDeclaration;
 import com.github.javaparser.ast.body.MethodDeclaration;
 import com.github.javaparser.resolution.declarations.ResolvedConstructorDeclaration;
@@ -52,6 +53,13 @@ public final class AstUtils {
         .map(p -> normalizeType(p.getType().asString()))
         .collect(Collectors.joining(","));
     return cd.getNameAsString() + "(" + params + ")";
+  }
+
+  /**
+   * Generates "name()" for compact constructors.
+   */
+  public static String getCompactConstructorSignature(CompactConstructorDeclaration ccd) {
+    return ccd.getNameAsString() + "()";
   }
 
   /**

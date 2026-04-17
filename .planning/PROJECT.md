@@ -16,6 +16,10 @@ Enable accurate code changes with drastically fewer tokens by progressively reco
 
 ## Requirements
 
+### In Progress (v3.0)
+
+- [ ] **OPT-01**: Intelligent output optimization and comment stripping for large projects.
+
 ### Validated (v3.0)
 
 - [x] **SYMB-01**: Integrate `JavaParser` Symbol Solver with `CombinedTypeSolver`
@@ -88,4 +92,4 @@ Enable accurate code changes with drastically fewer tokens by progressively reco
 
 ---
 
-*Last updated: 2026-04-15 after v3.0 completion.*
+*Last updated: 2026-04-17 after Phase 25 addition.*

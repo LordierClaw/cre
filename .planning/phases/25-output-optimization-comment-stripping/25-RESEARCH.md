@@ -146,12 +146,12 @@ public String process(String context) {
 **Formula Recommendation:**
 `int cap = (depth <= 1) ? 150 : (depth <= 3) ? 100 : 50;`
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **How to efficiently calculate Node ID during pruning?**
-   - Recommendation: Use a visitor or a pre-pass to map Nodes to IDs, or use a helper that matches the logic in `transformWithRelevance`.
+   - RESOLVED: Use the `AstUtils` or a specialized helper that replicates the indexing logic. The implementation in `25-01-PLAN.md` will include a helper method to ensure consistency.
 2. **Should we keep license headers?**
-   - Recommendation: No, these are usually unneeded for LLM context and should be pruned (they are usually orphan comments at the start of the file).
+   - RESOLVED: No. License headers (usually orphan comments at the start of the file) will be pruned as they do not provide technical context relevant to code changes.
 
 ## Environment Availability
 

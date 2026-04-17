@@ -69,7 +69,7 @@ public class CreServiceImpl implements CreService {
     List<String> gathered = gatherNodesOrdered(graph, startNode, depth);
     
     try {
-      String integratedView = buildIntegratedView(ctx, gathered, options != null ? options : ContextOptions.defaultOptions());
+      String integratedView = buildIntegratedView(ctx, gathered, startNode, options != null ? options : ContextOptions.defaultOptions());
       return postProcessor.process(integratedView);
     } catch (IOException e) {
       throw new CreException("Failed to build integrated view", e);
@@ -144,7 +144,7 @@ public class CreServiceImpl implements CreService {
       CompilationUnit cu = AstUtils.JAVA_PARSER.parse(source).getResult()
           .orElseThrow(() -> new CreException("Failed to parse " + filePath));
 
-      pruneComments(cu);
+      pruneComments(cu, Set.of(), nodeId);
       cu.findAll(MethodDeclaration.class).forEach(MethodDeclaration::removeBody);
       cu.findAll(ConstructorDeclaration.class).forEach(cd -> cd.setBody(new com.github.javaparser.ast.stmt.BlockStmt()));
 
@@ -248,10 +248,11 @@ public class CreServiceImpl implements CreService {
     return result;
   }
 
-  private String buildIntegratedView(CreContext ctx, List<String> gathered, ContextOptions options) throws IOException {
+  private String buildIntegratedView(CreContext ctx, List<String> gathered, String startNodeId, ContextOptions options) throws IOException {
     Path projectRoot = ctx.projectRoot();
     Set<String> visitedTypes = new HashSet<>();
     StringBuilder sb = new StringBuilder();
+    Set<String> gatheredSet = new HashSet<>(gathered);
 
     for (String nodeId : gathered) {
       String typeFqn = nodeId.contains("::") ? nodeId.split("::")[0] : nodeId;
@@ -265,7 +266,7 @@ public class CreServiceImpl implements CreService {
               .orElseThrow(() -> new RuntimeException("Failed to parse " + path));
 
           LexicalPreservingPrinter.setup(cu);
-          pruneComments(cu);
+          pruneComments(cu, gatheredSet, startNodeId);
           Set<String> markers = transformWithRelevance(cu, typeFqn, gathered, options);
 
           String code = LexicalPreservingPrinter.print(cu);
@@ -285,10 +286,6 @@ public class CreServiceImpl implements CreService {
       });
     }
     return sb.toString().trim();
-  }
-
-  private void pruneComments(CompilationUnit cu) {
-    pruneComments(cu, Set.of(), "");
   }
 
   private void pruneComments(CompilationUnit cu, Set<String> gatheredIds, String targetNodeId) {

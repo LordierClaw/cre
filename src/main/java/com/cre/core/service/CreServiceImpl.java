@@ -293,46 +293,58 @@ public class CreServiceImpl implements CreService {
   private void pruneComments(CompilationUnit cu, Set<String> gatheredIds, String targetNodeId) {
     String targetFqn = targetNodeId.contains("::") ? targetNodeId.split("::")[0] : targetNodeId;
 
+    // 1. Remove attached comments from nodes we are pruning
     for (TypeDeclaration<?> td : cu.findAll(TypeDeclaration.class)) {
       String typeFqn = td.getFullyQualifiedName().orElse("");
-      boolean isGathered = gatheredIds.contains(typeFqn);
-      if (td.getJavadocComment().isPresent() && !typeFqn.equals(targetFqn) && !isGathered) {
-        td.getJavadocComment().get().remove();
+      if (!typeFqn.equals(targetFqn)) {
+        td.setComment(null);
       }
     }
 
     for (BodyDeclaration<?> member : cu.findAll(BodyDeclaration.class)) {
       if (member instanceof TypeDeclaration) continue;
-      
-      String typeFqn = "";
-      com.github.javaparser.ast.Node parentNode = member.getParentNode().orElse(null);
-      while (parentNode != null && !(parentNode instanceof TypeDeclaration)) {
-          parentNode = parentNode.getParentNode().orElse(null);
-      }
-      if (parentNode instanceof TypeDeclaration<?> td) {
-          typeFqn = td.getFullyQualifiedName().orElse("");
-      }
-
+      String typeFqn = getParentTypeFqn(member);
       String nodeId = calculateNodeId(member, typeFqn);
-      if (nodeId != null && !gatheredIds.contains(nodeId)) {
-        member.getAllContainedComments().forEach(Comment::remove);
-        member.getComment().ifPresent(c -> c.remove());
+      if (nodeId == null || !gatheredIds.contains(nodeId)) {
+        member.setComment(null);
       }
     }
 
-    // Handle Record components (indexed as fields)
-    for (com.github.javaparser.ast.body.Parameter p : cu.findAll(com.github.javaparser.ast.body.Parameter.class)) {
-      if (p.getParentNode().orElse(null) instanceof RecordDeclaration rd) {
-        String typeFqn = rd.getFullyQualifiedName().orElse("");
-        String nodeId = typeFqn + "::field:" + p.getNameAsString();
-        if (!gatheredIds.contains(nodeId)) {
-          p.getAllContainedComments().forEach(Comment::remove);
-          p.getComment().ifPresent(c -> c.remove());
+    // 2. Remove all comments that are not inside a gathered member's body
+    // This catches orphans (commented out functions), internal comments of skeletons, etc.
+    for (Comment c : cu.findAll(Comment.class)) {
+      boolean keep = false;
+      com.github.javaparser.ast.Node parent = c.getParentNode().orElse(null);
+      while (parent != null) {
+        if (parent instanceof BodyDeclaration<?> bd && !(bd instanceof TypeDeclaration)) {
+          String typeFqn = getParentTypeFqn(bd);
+          String nodeId = calculateNodeId(bd, typeFqn);
+          if (gatheredIds.contains(nodeId)) {
+            keep = true;
+            break;
+          }
         }
+        parent = parent.getParentNode().orElse(null);
+      }
+
+      if (!keep) {
+        c.remove();
       }
     }
 
+    // Ensure all orphans are gone for LexicalPreservingPrinter
     cu.getOrphanComments().forEach(Comment::remove);
+  }
+
+  private String getParentTypeFqn(BodyDeclaration<?> member) {
+    com.github.javaparser.ast.Node parent = member.getParentNode().orElse(null);
+    while (parent != null && !(parent instanceof TypeDeclaration)) {
+      parent = parent.getParentNode().orElse(null);
+    }
+    if (parent instanceof TypeDeclaration<?> td) {
+      return td.getFullyQualifiedName().orElse("");
+    }
+    return "";
   }
 
   private String calculateNodeId(BodyDeclaration<?> node, String typeFqn) {

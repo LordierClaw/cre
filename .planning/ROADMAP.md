@@ -36,7 +36,7 @@ CRE (Context Reconstruction Engine) is an AST-backed graph traversal engine desi
 | 22 | Polymorphism & Inheritance | Completed | 2026-04-15 |
 | 23 | Modern Java Features | Completed | 2026-04-15 |
 | 24 | Final Verification & UAT | Completed | 2026-04-15 |
-| 25 | Output Optimization & Comment Stripping | Not started | TBD |
+| 25 | 1/4 | In Progress|  |
 
 ## Phases
 
@@ -77,7 +77,7 @@ CRE (Context Reconstruction Engine) is an AST-backed graph traversal engine desi
   2. Code formatting issues (line breaks, excessive empty lines) are resolved.
   3. Token count is significantly reduced for large project queries.
 **Plans**:
-- [ ] 25-01-PLAN.md — Traversal and Comment Pruning Refactor
+- [x] 25-01-PLAN.md — Traversal and Comment Pruning Refactor
 - [ ] 25-02-PLAN.md — Formatting Cleanup & Unit Tests
 - [ ] 25-03-PLAN.md — E2E Verification & Performance
 

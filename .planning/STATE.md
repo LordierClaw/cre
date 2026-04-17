@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: MVP
 status: In Progress
-stopped_at: Phase 25 planned
-last_updated: "2026-04-17T04:17:53.567Z"
+stopped_at: Completed 25-01-PLAN.md
+last_updated: "2026-04-17T04:36:41.360Z"
 progress:
   total_phases: 27
   completed_phases: 14
-  total_plans: 27
-  completed_plans: 20
-  percent: 74
+  total_plans: 28
+  completed_plans: 21
+  percent: 75
 ---
 
 # Project State
@@ -26,7 +26,7 @@ See: `.planning/PROJECT.md` (updated 2026-04-17)
 ## Current position
 
 Phase: 25
-Plan: Not started
+Plan: 02
 
 ## Performance metrics
 
@@ -34,8 +34,10 @@ Plan: Not started
 
 - Milestone v2.0 completed successfully.
 - v3.0 initialized with 6 new phases.
-- Phase 19, 20, 21, 22, 23 & 24 completed.
-- Phase 25 added for output optimization.
+- Phase 19, 20, 21, 22, 23, 24 & 25-01 completed.
+
+**Metrics:**
+- 2026-04-17: Phase 25 Plan 01 (3 tasks, 1 files, 40m)
 
 **Recent trend:** Milestone v3.0 core symbol resolution completed. Moving towards token efficiency and output quality optimization for large projects.
 
@@ -52,6 +54,8 @@ Logged in `PROJECT.md` Key Decisions. v3.0 highlights:
 - Maintained backward compatibility by using simple parameter names in method signatures.
 - Enabled hierarchy-aware resolution for overridden methods and interface calls.
 - Added support for recursive indexing of nested types and Java records.
+- [Phase 25]: Dynamic node capping based on depth (D-09)
+- [Phase 25]: Surgical comment pruning based on gathered vs skeleton nodes (D-01, D-02, D-03)
 
 ### Pending todos
 
@@ -63,6 +67,6 @@ Logged in `PROJECT.md` Key Decisions. v3.0 highlights:
 
 ## Session continuity
 
-Last session: 2026-04-17T04:17:53.564Z
-Stopped at: Phase 25 planned
+Last session: 2026-04-17T04:36:41.357Z
+Stopped at: Completed 25-01-PLAN.md
 Resume file: None
